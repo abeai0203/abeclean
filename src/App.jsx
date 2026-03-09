@@ -203,34 +203,54 @@ const App = () => {
     }
     setLoading(true);
     try {
-      // Use consistent date string format (YYYY-MM-DD)
       const end = new Date(selectedBooking.end);
       const checkoutDate = end.toISOString().split('T')[0];
       const propertyId = selectedBooking.propertyId;
 
-      console.log('Assigning task:', { propertyId, checkoutDate, cleanerId });
+      console.log('Assigning/Updating task:', { propertyId, checkoutDate, cleanerId });
 
-      const { error } = await supabase.from('cleaning_tasks').insert([{
-        property_id: propertyId,
-        checkout_date: checkoutDate,
-        cleaner_id: cleanerId,
-        status: 'pending',
-        checklist: [
-          { task: 'Change bedsheet & pillow covers', done: false },
-          { task: 'Clean bathroom & refill toiletries', done: false },
-          { task: 'Vacuum & mop floors', done: false },
-          { task: 'Check for damages/left items', done: false }
-        ]
-      }]);
+      // Check if task already exists for this property and date
+      const { data: existingTask, error: fetchError } = await supabase
+        .from('cleaning_tasks')
+        .select('id')
+        .eq('property_id', propertyId)
+        .eq('checkout_date', checkoutDate)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (fetchError) throw fetchError;
+
+      if (existingTask) {
+        // Update existing task
+        const { error: updateError } = await supabase
+          .from('cleaning_tasks')
+          .update({ cleaner_id: cleanerId })
+          .eq('id', existingTask.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Insert new task
+        const { error: insertError } = await supabase.from('cleaning_tasks').insert([{
+          property_id: propertyId,
+          checkout_date: checkoutDate,
+          cleaner_id: cleanerId,
+          status: 'pending',
+          checklist: [
+            { task: 'Change bedsheet & pillow covers', done: false },
+            { task: 'Clean bathroom & refill toiletries', done: false },
+            { task: 'Vacuum & mop floors', done: false },
+            { task: 'Check for damages/left items', done: false }
+          ]
+        }]);
+
+        if (insertError) throw insertError;
+      }
 
       setShowAssignModal(false);
       await fetchCleaningTasks();
-      alert('Cleaner assigned successfully!');
+      alert(existingTask ? 'Cleaner updated successfully!' : 'Cleaner assigned successfully!');
     } catch (err) {
-      console.error('Assignment error:', err);
-      alert('Error assigning cleaner: ' + err.message);
+      console.error('Assignment/Update error:', err);
+      alert('Error: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -475,14 +495,18 @@ const App = () => {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-4 text-slate-500">
+                          <div
+                            className={`flex items-center gap-4 text-slate-500 cursor-pointer p-2 -m-2 rounded-2xl transition-all hover:bg-slate-50 ${!task ? 'animate-pulse' : ''}`}
+                            onClick={() => openAssignModal(nextBooking)}
+                          >
                             <div className="w-10 h-10 rounded-2xl bg-pink-50 flex items-center justify-center text-airbnb group-hover:scale-110 transition-transform">
                               <User size={20} />
                             </div>
                             <div>
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Next Assignee</p>
-                              <p className="text-sm font-black text-slate-700">
+                              <p className="text-sm font-black text-slate-700 flex items-center gap-2">
                                 {task ? task.cleaners?.name : <span className="text-slate-300 italic">Unassigned</span>}
+                                <Plus size={12} className="text-slate-300" />
                               </p>
                             </div>
                           </div>
@@ -505,7 +529,11 @@ const App = () => {
                                 const isAssigned = !!bookingTask;
 
                                 return (
-                                  <div key={idx} className={`flex justify-between items-center px-4 py-2.5 rounded-xl border ${isPast ? 'bg-slate-50/50 border-slate-100 text-slate-400 opacity-60' : 'bg-white border-slate-100 text-slate-600 shadow-sm'}`}>
+                                  <div
+                                    key={idx}
+                                    onClick={() => !isPast && openAssignModal({ ...b, propertyId: property.id })}
+                                    className={`flex justify-between items-center px-4 py-2.5 rounded-xl border transition-all ${isPast ? 'bg-slate-50/50 border-slate-100 text-slate-400 opacity-60' : 'bg-white border-slate-100 text-slate-600 shadow-sm cursor-pointer hover:border-airbnb hover:scale-[1.02] active:scale-95'}`}
+                                  >
                                     <div className="flex items-center gap-3">
                                       <div className={`w-1.5 h-1.5 rounded-full ${isPast ? 'bg-slate-300' :
                                         isAssigned ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
@@ -515,9 +543,12 @@ const App = () => {
                                         {new Date(b.start).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} - {end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                                       </span>
                                     </div>
-                                    <span className={`text-[9px] font-black uppercase tracking-tighter ${isAssigned && !isPast ? 'text-emerald-600' : ''}`}>
-                                      {isPast ? 'Past' : isAssigned ? 'Assigned' : 'Upcoming'}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      <span className={`text-[9px] font-black uppercase tracking-tighter ${isAssigned && !isPast ? 'text-emerald-600' : ''}`}>
+                                        {isPast ? 'Past' : isAssigned ? 'Assigned' : 'Upcoming'}
+                                      </span>
+                                      {!isPast && <RotateCw size={10} className="text-slate-300 group-hover:text-airbnb" />}
+                                    </div>
                                   </div>
                                 );
                               })}
@@ -628,15 +659,24 @@ const App = () => {
                           </div>
                           <div className="flex items-center gap-3">
                             {task ? (
-                              <button onClick={() => { setSelectedTask(task); setShowTaskModal(true); }} className="flex items-center gap-3 px-5 py-3 bg-white border border-slate-200 rounded-2xl hover:border-airbnb hover:shadow-lg transition-all relative overflow-hidden group/btn">
-                                <div className="absolute inset-x-0 bottom-0 h-0.5 bg-airbnb origin-left scale-x-0 group-hover/btn:scale-x-100 transition-transform duration-500"></div>
-                                <div className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center text-airbnb"><User size={16} /></div>
-                                <div className="text-left">
-                                  <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none">Assignee</p>
-                                  <p className="text-sm font-black text-slate-700">{task.cleaners?.name}</p>
-                                </div>
-                                {task.status === 'completed' ? <CheckCircle size={18} className="text-emerald-500 ml-2" /> : <div className={`w-2.5 h-2.5 rounded-full ml-2 animate-pulse ${task.cleaner_id ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-400'}`} />}
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button onClick={() => { setSelectedTask(task); setShowTaskModal(true); }} className="flex items-center gap-3 px-5 py-3 bg-white border border-slate-200 rounded-2xl hover:border-airbnb hover:shadow-lg transition-all relative overflow-hidden group/btn">
+                                  <div className="absolute inset-x-0 bottom-0 h-0.5 bg-airbnb origin-left scale-x-0 group-hover/btn:scale-x-100 transition-transform duration-500"></div>
+                                  <div className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center text-airbnb"><User size={16} /></div>
+                                  <div className="text-left">
+                                    <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none">Assignee</p>
+                                    <p className="text-sm font-black text-slate-700">{task.cleaners?.name}</p>
+                                  </div>
+                                  {task.status === 'completed' ? <CheckCircle size={18} className="text-emerald-500 ml-2" /> : <div className={`w-2.5 h-2.5 rounded-full ml-2 animate-pulse ${task.cleaner_id ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-400'}`} />}
+                                </button>
+                                <button
+                                  onClick={() => openAssignModal(booking)}
+                                  className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:text-airbnb hover:bg-white hover:border-airbnb transition-all shadow-sm"
+                                  title="Change Cleaner"
+                                >
+                                  <RotateCw size={14} />
+                                </button>
+                              </div>
                             ) : (
                               <button onClick={() => openAssignModal(booking)} className="bg-airbnb/5 text-airbnb hover:bg-airbnb hover:text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-sm hover:shadow-airbnb/20 active:scale-95">
                                 Assign Cleaner
@@ -685,14 +725,24 @@ const App = () => {
 
                             {/* Hover Details Popover */}
                             {checkouts.length > 0 && (
-                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-40 bg-slate-900 text-white rounded-xl p-3 text-[10px] font-bold opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 scale-90 group-hover:scale-100 z-50 shadow-2xl pointer-events-none">
-                                <div className="text-slate-400 mb-2 font-black uppercase tracking-[0.1em] border-b border-white/10 pb-1">Tasks: {checkouts.length}</div>
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 bg-slate-900 text-white rounded-xl p-3 text-[10px] font-bold opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 scale-90 group-hover:scale-100 z-50 shadow-2xl">
+                                <div className="text-slate-400 mb-2 font-black uppercase tracking-[0.1em] border-b border-white/10 pb-1 flex justify-between">
+                                  <span>Tasks: {checkouts.length}</span>
+                                  <span className="text-[8px] text-airbnb">Click to Edit</span>
+                                </div>
                                 {checkouts.map((b, i) => {
                                   const task = cleaningTasks.find(t => String(t.property_id) === String(b.propertyId) && t.checkout_date === dateString);
                                   return (
-                                    <div key={i} className="flex items-center gap-2 mb-1.5 last:mb-0">
-                                      <div className={`w-1.5 h-1.5 rounded-full ${task && task.cleaner_id ? 'bg-emerald-400' : 'bg-airbnb'}`}></div>
-                                      <span className="truncate">{b.propertyName}</span>
+                                    <div
+                                      key={i}
+                                      onClick={(e) => { e.stopPropagation(); openAssignModal(b); }}
+                                      className="flex items-center justify-between gap-2 mb-1.5 last:mb-0 p-1.5 rounded-lg hover:bg-white/10 cursor-pointer transition-colors"
+                                    >
+                                      <div className="flex items-center gap-2 truncate">
+                                        <div className={`w-1.5 h-1.5 rounded-full ${task && task.cleaner_id ? 'bg-emerald-400' : 'bg-airbnb'}`}></div>
+                                        <span className="truncate">{b.propertyName}</span>
+                                      </div>
+                                      <RotateCw size={10} className="text-white/30" />
                                     </div>
                                   );
                                 })}
