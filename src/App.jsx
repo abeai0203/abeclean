@@ -382,17 +382,48 @@ const App = () => {
         <div className="max-w-7xl mx-auto w-full p-4 md:p-8">
           {view === 'dashboard' && (
             <>
-              <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+              <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
                 <div className="flex items-center gap-4">
                   <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-slate-600 hover:bg-white rounded-lg"><Menu size={24} /></button>
-                  <div>
-                    <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Operations Dashboard</h2>
-                    <p className="text-slate-500 text-sm font-medium">Viewing focus: <span className="text-airbnb capitalize">{filterArea}</span></p>
-                  </div>
+                  <h2 className="text-3xl font-black text-slate-900 tracking-tight">Dashboard</h2>
                 </div>
-                <button onClick={() => setShowNewTaskModal(true)} className="w-full md:w-auto bg-airbnb text-white px-6 py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl shadow-airbnb/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
-                  <Plus size={20} strokeWidth={3} /> New Task
-                </button>
+
+                {/* Stats Section */}
+                <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+                  {(() => {
+                    const now = new Date();
+                    const currentMonth = now.getMonth();
+                    const currentYear = now.getFullYear();
+
+                    const thisMonthBookings = properties.flatMap(p => (p.bookings || []).filter(b => {
+                      const end = new Date(b.end);
+                      return end.getMonth() === currentMonth && end.getFullYear() === currentYear;
+                    }));
+
+                    const doneThisMonth = (cleaningTasks || []).filter(t => {
+                      const date = new Date(t.checkout_date);
+                      return t.status === 'completed' && date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+                    }).length;
+
+                    return (
+                      <div className="flex items-center gap-4 bg-white/50 backdrop-blur-sm p-2 rounded-3xl border border-white/50 shadow-sm">
+                        <div className="flex items-center gap-4 px-4 py-2 border-r border-slate-100 last:border-0 translate-y-[-1px]">
+                          <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-tight">Total</p><p className="text-lg font-black text-slate-900 leading-tight">{properties.length}</p></div>
+                        </div>
+                        <div className="flex items-center gap-4 px-4 py-2 border-r border-slate-100 last:border-0 translate-y-[-1px]">
+                          <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-tight text-airbnb">This Month</p><p className="text-lg font-black text-slate-900 leading-tight">{thisMonthBookings.length}</p></div>
+                        </div>
+                        <div className="flex items-center gap-4 px-4 py-2 border-r border-slate-100 last:border-0 translate-y-[-1px]">
+                          <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-tight text-emerald-500">Done</p><p className="text-lg font-black text-slate-900 leading-tight">{doneThisMonth}</p></div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <button onClick={() => setShowNewTaskModal(true)} className="w-full md:w-auto bg-airbnb text-white px-8 py-4 rounded-3xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-airbnb/20 transition-all hover:scale-105 active:scale-95 leading-none">
+                    <Plus size={20} strokeWidth={3} /> Add Unit
+                  </button>
+                </div>
               </header>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-10">
