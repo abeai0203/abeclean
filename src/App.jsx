@@ -109,7 +109,7 @@ const App = () => {
     setLoading(true);
     try {
       // Use internal Cloudflare function to bypass CORS
-      const proxyUrl = `/functions/fetch-ical?url=${encodeURIComponent(unit.ical_url)}`;
+      const proxyUrl = `/fetch-ical?url=${encodeURIComponent(unit.ical_url)}`;
       const response = await fetch(proxyUrl);
 
       if (!response.ok) {
