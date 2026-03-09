@@ -508,8 +508,8 @@ const App = () => {
                                   <div key={idx} className={`flex justify-between items-center px-4 py-2.5 rounded-xl border ${isPast ? 'bg-slate-50/50 border-slate-100 text-slate-400 opacity-60' : 'bg-white border-slate-100 text-slate-600 shadow-sm'}`}>
                                     <div className="flex items-center gap-3">
                                       <div className={`w-1.5 h-1.5 rounded-full ${isPast ? 'bg-slate-300' :
-                                          isAssigned ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
-                                            'bg-airbnb animate-pulse'
+                                        isAssigned ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+                                          'bg-airbnb animate-pulse'
                                         }`}></div>
                                       <span className="text-[11px] font-bold">
                                         {new Date(b.start).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} - {end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
@@ -635,7 +635,7 @@ const App = () => {
                                   <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none">Assignee</p>
                                   <p className="text-sm font-black text-slate-700">{task.cleaners?.name}</p>
                                 </div>
-                                {task.status === 'completed' ? <CheckCircle size={18} className="text-emerald-500 ml-2" /> : <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse ml-2" />}
+                                {task.status === 'completed' ? <CheckCircle size={18} className="text-emerald-500 ml-2" /> : <div className={`w-2.5 h-2.5 rounded-full ml-2 animate-pulse ${task.cleaner_id ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-400'}`} />}
                               </button>
                             ) : (
                               <button onClick={() => openAssignModal(booking)} className="bg-airbnb/5 text-airbnb hover:bg-airbnb hover:text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-sm hover:shadow-airbnb/20 active:scale-95">
@@ -676,7 +676,7 @@ const App = () => {
                                   <div
                                     key={i}
                                     title={`${b.propertyName}${task ? ` (${task.cleaners?.name})` : ''}`}
-                                    className={`h-1.5 w-full rounded-full transition-all duration-500 ${task?.status === 'completed' ? 'bg-emerald-400' : task ? 'bg-amber-400' : 'bg-pink-400'} group-hover:scale-y-125`}
+                                    className={`h-1.5 w-full rounded-full transition-all duration-500 ${task?.status === 'completed' || (task && task.cleaner_id) ? 'bg-emerald-400' : 'bg-pink-400'} group-hover:scale-y-125`}
                                   />
                                 );
                               })}
@@ -687,12 +687,15 @@ const App = () => {
                             {checkouts.length > 0 && (
                               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-40 bg-slate-900 text-white rounded-xl p-3 text-[10px] font-bold opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 scale-90 group-hover:scale-100 z-50 shadow-2xl pointer-events-none">
                                 <div className="text-slate-400 mb-2 font-black uppercase tracking-[0.1em] border-b border-white/10 pb-1">Tasks: {checkouts.length}</div>
-                                {checkouts.map((b, i) => (
-                                  <div key={i} className="flex items-center gap-2 mb-1.5 last:mb-0">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-airbnb"></div>
-                                    <span className="truncate">{b.propertyName}</span>
-                                  </div>
-                                ))}
+                                {checkouts.map((b, i) => {
+                                  const task = cleaningTasks.find(t => String(t.property_id) === String(b.propertyId) && t.checkout_date === dateString);
+                                  return (
+                                    <div key={i} className="flex items-center gap-2 mb-1.5 last:mb-0">
+                                      <div className={`w-1.5 h-1.5 rounded-full ${task && task.cleaner_id ? 'bg-emerald-400' : 'bg-airbnb'}`}></div>
+                                      <span className="truncate">{b.propertyName}</span>
+                                    </div>
+                                  );
+                                })}
                                 <div className="absolute inset-x-0 -bottom-1 h-2 bg-slate-900 clip-path-triangle rotate-180 mx-auto w-2"></div>
                               </div>
                             )}
