@@ -460,13 +460,13 @@ const App = () => {
                         <h3 className="text-3xl font-black text-slate-900 mb-6 group-hover:text-airbnb transition-colors">{property.name}</h3>
 
                         {/* Details Row */}
-                        <div className="space-y-4 mb-10 flex-grow">
+                        <div className="space-y-4 mb-6">
                           <div className="flex items-center gap-4 text-slate-500">
                             <div className="w-10 h-10 rounded-2xl bg-pink-50 flex items-center justify-center text-airbnb group-hover:scale-110 transition-transform">
                               <Clock size={20} />
                             </div>
                             <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Checkout</p>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Next Checkout</p>
                               <p className="text-sm font-black text-slate-700">
                                 {nextBooking
                                   ? `${property.checkout_time || '12:00 PM'} (${new Date(nextBooking.end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })})`
@@ -480,11 +480,36 @@ const App = () => {
                               <User size={20} />
                             </div>
                             <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Assignee</p>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Next Assignee</p>
                               <p className="text-sm font-black text-slate-700">
                                 {task ? task.cleaners?.name : <span className="text-slate-300 italic">Unassigned</span>}
                               </p>
                             </div>
+                          </div>
+                        </div>
+
+                        {/* All Bookings Section */}
+                        <div className="flex-grow mb-8 overflow-hidden flex flex-col">
+                          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-3">Booking History & Schedule</p>
+                          <div className="space-y-2 overflow-y-auto pr-2 max-h-[140px] custom-scrollbar">
+                            {(property.bookings || [])
+                              .sort((a, b) => new Date(b.start) - new Date(b.start))
+                              .map((b, idx) => {
+                                const end = new Date(b.end);
+                                const isPast = end < new Date();
+                                return (
+                                  <div key={idx} className={`flex justify-between items-center px-4 py-2.5 rounded-xl border ${isPast ? 'bg-slate-50/50 border-slate-100 text-slate-400 opacity-60' : 'bg-white border-slate-100 text-slate-600 shadow-sm'}`}>
+                                    <div className="flex items-center gap-3">
+                                      <div className={`w-1.5 h-1.5 rounded-full ${isPast ? 'bg-slate-300' : 'bg-airbnb animate-pulse'}`}></div>
+                                      <span className="text-[11px] font-bold">
+                                        {new Date(b.start).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} - {end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                                      </span>
+                                    </div>
+                                    <span className="text-[9px] font-black uppercase tracking-tighter shadow-sm">{isPast ? 'Past' : 'Upcoming'}</span>
+                                  </div>
+                                );
+                              })}
+                            {(property.bookings || []).length === 0 && <p className="text-xs text-slate-300 italic py-4">No data synchronized yet.</p>}
                           </div>
                         </div>
 
