@@ -497,15 +497,27 @@ const App = () => {
                               .map((b, idx) => {
                                 const end = new Date(b.end);
                                 const isPast = end < new Date();
+                                const dateString = end.toISOString().split('T')[0];
+                                const bookingTask = cleaningTasks.find(t =>
+                                  String(t.property_id) === String(property.id) &&
+                                  t.checkout_date === dateString
+                                );
+                                const isAssigned = !!bookingTask;
+
                                 return (
                                   <div key={idx} className={`flex justify-between items-center px-4 py-2.5 rounded-xl border ${isPast ? 'bg-slate-50/50 border-slate-100 text-slate-400 opacity-60' : 'bg-white border-slate-100 text-slate-600 shadow-sm'}`}>
                                     <div className="flex items-center gap-3">
-                                      <div className={`w-1.5 h-1.5 rounded-full ${isPast ? 'bg-slate-300' : 'bg-airbnb animate-pulse'}`}></div>
+                                      <div className={`w-1.5 h-1.5 rounded-full ${isPast ? 'bg-slate-300' :
+                                          isAssigned ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+                                            'bg-airbnb animate-pulse'
+                                        }`}></div>
                                       <span className="text-[11px] font-bold">
                                         {new Date(b.start).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} - {end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                                       </span>
                                     </div>
-                                    <span className="text-[9px] font-black uppercase tracking-tighter shadow-sm">{isPast ? 'Past' : 'Upcoming'}</span>
+                                    <span className={`text-[9px] font-black uppercase tracking-tighter ${isAssigned && !isPast ? 'text-emerald-600' : ''}`}>
+                                      {isPast ? 'Past' : isAssigned ? 'Assigned' : 'Upcoming'}
+                                    </span>
                                   </div>
                                 );
                               })}
