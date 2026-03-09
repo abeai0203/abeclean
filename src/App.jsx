@@ -138,14 +138,12 @@ const App = () => {
 
           const startDate = new Date(parseInt(startStr.substring(0, 4)), parseInt(startStr.substring(4, 6)) - 1, parseInt(startStr.substring(6, 8)));
           const endDate = new Date(parseInt(endStr.substring(0, 4)), parseInt(endStr.substring(4, 6)) - 1, parseInt(endStr.substring(6, 8)));
-          const summary = summaryMatch ? summaryMatch[1].trim() : 'Reserved';
-
-          // We only care about future/current bookings
-          if (endDate >= now) {
+          // We only care about actual reservations (Reserved) and future stays
+          if (summary === 'Reserved' && endDate >= now) {
             bookings.push({
               start: startDate.toISOString(),
               end: endDate.toISOString(),
-              summary: summary === 'Reserved' ? 'Guest Booking' : summary
+              summary: 'Guest Booking'
             });
 
             // Find the closest upcoming checkout
@@ -312,7 +310,7 @@ const App = () => {
                 {(() => {
                   const allBookings = properties.flatMap(p =>
                     (p.bookings || []).map(b => ({ ...b, propertyName: p.name, propertyArea: p.area }))
-                  ).sort((a, b) => new Date(a.start) - new Date(b.start));
+                  ).sort((a, b) => new Date(a.end) - new Date(b.end)); // Sort by checkout date
 
                   if (allBookings.length === 0) {
                     return (
@@ -320,8 +318,8 @@ const App = () => {
                         <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                           <Calendar size={32} className="text-slate-300" />
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900 mb-1">No Bookings Found</h3>
-                        <p className="text-slate-500">Sync your Airbnb calendars to see upcoming stays correctly.</p>
+                        <h3 className="text-lg font-bold text-slate-900 mb-1">No Cleanings Scheduled</h3>
+                        <p className="text-slate-500">Sync your Airbnb calendars to see when guests are leaving.</p>
                       </div>
                     );
                   }
@@ -329,25 +327,28 @@ const App = () => {
                   return allBookings.map((booking, idx) => {
                     const start = new Date(booking.start);
                     const end = new Date(booking.end);
-                    const isToday = new Date().toDateString() === start.toDateString();
+                    const isToday = new Date().toDateString() === end.toDateString(); // Cleaning happens on checkout day!
 
                     return (
-                      <div key={idx} className={`p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50 transition-colors ${isToday ? 'bg-airbnb/5' : ''}`}>
+                      <div key={idx} className={`p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50 transition-colors ${isToday ? 'bg-airbnb/5 border-l-4 border-l-airbnb' : ''}`}>
                         <div className="flex items-start gap-4">
                           <div className={`w-12 h-12 rounded-2xl flex flex-col items-center justify-center shrink-0 border ${isToday ? 'bg-airbnb border-airbnb text-white' : 'bg-white border-slate-200 text-slate-400'}`}>
-                            <span className="text-[10px] font-bold uppercase leading-none mb-0.5">{start.toLocaleDateString('en-GB', { month: 'short' })}</span>
-                            <span className="text-lg font-black leading-none">{start.getDate()}</span>
+                            <span className="text-[10px] font-bold uppercase leading-none mb-0.5">{end.toLocaleDateString('en-GB', { month: 'short' })}</span>
+                            <span className="text-lg font-black leading-none">{end.getDate()}</span>
                           </div>
                           <div>
                             <div className="flex items-center gap-2 mb-1">
                               <h4 className="font-bold text-slate-900">{booking.propertyName}</h4>
                               <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md text-[10px] font-bold uppercase tracking-wider">{booking.propertyArea}</span>
-                              {isToday && <span className="px-2 py-0.5 bg-airbnb text-white rounded-md text-[10px] font-black uppercase tracking-wider animate-pulse">Checking In</span>}
+                              {isToday && <span className="px-2 py-0.5 bg-airbnb text-white rounded-md text-[10px] font-black uppercase tracking-wider animate-pulse">Checkout Today</span>}
                             </div>
                             <div className="flex items-center gap-3 text-sm text-slate-500">
-                              <span className="flex items-center gap-1.5 font-medium"><Clock size={14} className="text-airbnb/60" /> Checkout: {end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
+                              <span className="flex items-center gap-1.5 font-medium text-slate-700">
+                                <Sparkles size={14} className="text-airbnb" />
+                                Cleaning Required
+                              </span>
                               <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                              <span className="font-medium text-slate-700">{booking.summary}</span>
+                              <span className="font-medium">Stay: {start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} - {end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
                             </div>
                           </div>
                         </div>
