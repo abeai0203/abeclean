@@ -138,6 +138,7 @@ const App = () => {
 
           const startDate = new Date(parseInt(startStr.substring(0, 4)), parseInt(startStr.substring(4, 6)) - 1, parseInt(startStr.substring(6, 8)));
           const endDate = new Date(parseInt(endStr.substring(0, 4)), parseInt(endStr.substring(4, 6)) - 1, parseInt(endStr.substring(6, 8)));
+          const summary = summaryMatch ? summaryMatch[1].trim() : 'Reserved';
           // We only care about actual reservations (Reserved) and future stays
           if (summary === 'Reserved' && endDate >= now) {
             bookings.push({
