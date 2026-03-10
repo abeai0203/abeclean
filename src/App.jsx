@@ -633,24 +633,15 @@ const App = () => {
                           </div>
                           <div className="flex items-center gap-3">
                             {task ? (
-                              <div className="flex items-center gap-2">
-                                <button onClick={() => openAssignModal(booking)} className="flex items-center gap-3 px-5 py-3 bg-white border border-slate-200 rounded-2xl hover:border-airbnb hover:shadow-lg transition-all relative overflow-hidden group/btn">
-                                  <div className="absolute inset-x-0 bottom-0 h-0.5 bg-airbnb origin-left scale-x-0 group-hover/btn:scale-x-100 transition-transform duration-500"></div>
-                                  <div className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center text-airbnb"><User size={16} /></div>
-                                  <div className="text-left">
-                                    <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none">Assignee</p>
-                                    <p className="text-sm font-black text-slate-700">{task.cleaners?.name}</p>
-                                  </div>
-                                  {task.status === 'completed' ? <CheckCircle size={18} className="text-emerald-500 ml-2" /> : <div className={`w-2.5 h-2.5 rounded-full ml-2 animate-pulse ${task.cleaner_id ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-400'}`} />}
-                                </button>
-                                <button
-                                  onClick={() => openAssignModal(booking)}
-                                  className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:text-airbnb hover:bg-white hover:border-airbnb transition-all shadow-sm"
-                                  title="Change Cleaner"
-                                >
-                                  <RotateCw size={14} />
-                                </button>
-                              </div>
+                              <button onClick={() => openAssignModal(booking)} className="flex items-center gap-3 px-5 py-3 bg-white border border-slate-200 rounded-2xl hover:border-airbnb hover:shadow-lg transition-all relative overflow-hidden group/btn">
+                                <div className="absolute inset-x-0 bottom-0 h-0.5 bg-airbnb origin-left scale-x-0 group-hover/btn:scale-x-100 transition-transform duration-500"></div>
+                                <div className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center text-airbnb"><User size={16} /></div>
+                                <div className="text-left">
+                                  <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none">Assignee</p>
+                                  <p className="text-sm font-black text-slate-700">{task.cleaners?.name}</p>
+                                </div>
+                                {task.status === 'completed' ? <CheckCircle size={18} className="text-emerald-500 ml-2" /> : <div className={`w-2.5 h-2.5 rounded-full ml-2 animate-pulse ${task.cleaner_id ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-400'}`} />}
+                              </button>
                             ) : (
                               <button onClick={() => openAssignModal(booking)} className="bg-airbnb/5 text-airbnb hover:bg-airbnb hover:text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-sm hover:shadow-airbnb/20 active:scale-95">
                                 Assign Cleaner
