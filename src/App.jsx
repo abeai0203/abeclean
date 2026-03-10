@@ -92,12 +92,14 @@ const App = () => {
     }
   }, [activeCleanerTask?.checklist_responses, activeCleanerTask?.proof_images]);
   // Check for task_id in URL for cleaner mode
-  const params = new URLSearchParams(window.location.search);
-  const taskId = params.get('task_id');
-  if (taskId) {
-    setLoadingCleanerTask(true);
-    loadCleanerTask(taskId).finally(() => setLoadingCleanerTask(false));
-  }
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const taskId = params.get('task_id');
+    if (taskId) {
+      setLoadingCleanerTask(true);
+      loadCleanerTask(taskId).finally(() => setLoadingCleanerTask(false));
+    }
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
