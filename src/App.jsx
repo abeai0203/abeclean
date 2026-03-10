@@ -111,11 +111,14 @@ const App = () => {
 
   // 4. Data Loading based on auth state
   useEffect(() => {
-    if (isAdminAuthenticated) {
-      setShowOnboarding(false);
-      fetchData();
+    if (isAdminAuthenticated && session?.user?.id) {
+      // Avoid redundant fetches if we just manually fetched in onboarding
+      if (!showOnboarding) {
+        setShowOnboarding(false);
+        fetchData();
+      }
     }
-  }, [isAdminAuthenticated, session?.user?.id]);
+  }, [isAdminAuthenticated, session?.user?.id, showOnboarding]);
 
   // Persistent Progress for Cleaner View
   useEffect(() => {
@@ -404,17 +407,16 @@ const App = () => {
         }
       }
 
-      // 4. Force a small delay to ensure Supabase Auth session is propagated
-      await new Promise(r => setTimeout(r, 1000));
-      
-      // 5. Explicitly fetch session to be safe
+      // 4. Explicitly fetch session and set state
       const { data: { session: freshSession } } = await supabase.auth.getSession();
+      
+      // Update states first
       setSession(freshSession);
       setIsAdminAuthenticated(!!freshSession);
-
       setShowOnboarding(false);
-      // Fetch data immediately with the new ownerId to bypass stale session state
-      fetchData(ownerId);
+
+      // 5. Fetch data immediately and await it so we don't return from loading state too early
+      await fetchData(ownerId);
       
     } catch (err) {
       console.error('Onboarding Error:', err);
