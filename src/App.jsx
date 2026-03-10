@@ -31,6 +31,7 @@ const App = () => {
   const [showChecklistSettings, setShowChecklistSettings] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [reviewTask, setReviewTask] = useState(null);
+  const [loadingCleanerTask, setLoadingCleanerTask] = useState(false);
 
   const [newUnit, setNewUnit] = useState({
     name: '',
@@ -62,7 +63,8 @@ const App = () => {
     const params = new URLSearchParams(window.location.search);
     const taskId = params.get('task_id');
     if (taskId) {
-      loadCleanerTask(taskId);
+      setLoadingCleanerTask(true);
+      loadCleanerTask(taskId).finally(() => setLoadingCleanerTask(false));
     }
 
     return () => supabase.removeChannel(subscription);
@@ -147,14 +149,31 @@ const App = () => {
   };
 
   const loadCleanerTask = async (taskId) => {
-    const { data, error } = await supabase
-      .from('cleaning_tasks')
-      .select('*, cleaners(name, phone), properties(*)')
-      .eq('id', taskId)
-      .single();
+    try {
+      // First get the task
+      const { data: task, error: taskError } = await supabase
+        .from('cleaning_tasks')
+        .select('*')
+        .eq('id', taskId)
+        .single();
 
-    if (error) console.error('Error loading cleaner task:', error);
-    else setActiveCleanerTask(data);
+      if (taskError) throw taskError;
+
+      // Then get cleaner and property details separately for maximum reliability
+      const [cleanerRes, propertyRes] = await Promise.all([
+        supabase.from('cleaners').select('name, phone').eq('id', task.cleaner_id).single(),
+        supabase.from('properties').select('*').eq('id', task.property_id).single()
+      ]);
+
+      setActiveCleanerTask({
+        ...task,
+        cleaners: cleanerRes.data,
+        properties: propertyRes.data
+      });
+    } catch (err) {
+      console.error('Error loading cleaner task:', err.message);
+      // Even if details fail, show the task frame
+    }
   };
 
   async function handleAddUnit(e) {
@@ -409,6 +428,290 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+      {/* Cleaner Task View (Stand-alone Page Mode) */}
+      {(activeCleanerTask || loadingCleanerTask) && (
+        <div className="fixed inset-0 z-[100] bg-slate-50 overflow-y-auto">
+          <div className="max-w-xl mx-auto min-h-screen bg-white shadow-2xl flex flex-col">
+            {loadingCleanerTask ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-4">
+                <div className="w-12 h-12 border-4 border-slate-100 border-t-airbnb rounded-full animate-spin" />
+                <p className="font-bold text-slate-400">Memuatkan tugasan...</p>
+              </div>
+            ) : activeCleanerTask ? (
+              <>
+                <header className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+                  <div>
+                    <h1 className="text-xl font-black text-slate-900 tracking-tight">Sahkan Tugasan</h1>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{activeCleanerTask.properties?.name}</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center text-airbnb">
+                    <Sparkles size={20} />
+                  </div>
+                </header>
+
+                <main className="flex-1 p-6 space-y-8">
+                  {activeCleanerTask.status === 'completed' ? (
+                    <div className="text-center py-12 space-y-4">
+                      <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
+                        <CheckCircle size={40} />
+                      </div>
+                      <h2 className="text-2xl font-black text-slate-900">Tugasan Selesai!</h2>
+                      <p className="text-slate-500 font-medium">Terima kasih atas kerjasama anda. Laporan telah dihantar kepada admin.</p>
+                      <button onClick={() => window.location.href = '/'} className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-bold">Kembali</button>
+                    </div>
+                  ) : (
+                    <>
+                      <section>
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="font-black text-slate-900 text-lg uppercase tracking-tight">Senarai Semak</h3>
+                          <button
+                            onClick={() => {
+                              const allIds = checklistItems.reduce((acc, item) => ({ ...acc, [item.id]: true }), {});
+                              setActiveCleanerTask({ ...activeCleanerTask, checklist_responses: allIds });
+                            }}
+                            className="text-xs font-black text-airbnb uppercase tracking-widest"
+                          >
+                            Tanda Semua
+                          </button>
+                        </div>
+                        <div className="space-y-6">
+                          {['Ruang Tamu', 'Bilik', 'Tandas'].map(cat => (
+                            <div key={cat} className="space-y-3">
+                              <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">{cat}</h4>
+                              <div className="space-y-2">
+                                {checklistItems.filter(i => i.category === cat).map(item => (
+                                  <label key={item.id} className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 bg-slate-50/50 cursor-pointer active:bg-slate-100 transition-colors">
+                                    <input
+                                      type="checkbox"
+                                      className="w-6 h-6 rounded-lg border-2 border-slate-200 text-airbnb focus:ring-airbnb"
+                                      checked={activeCleanerTask.checklist_responses?.[item.id] || false}
+                                      onChange={(e) => {
+                                        const responses = { ...activeCleanerTask.checklist_responses, [item.id]: e.target.checked };
+                                        setActiveCleanerTask({ ...activeCleanerTask, checklist_responses: responses });
+                                      }}
+                                    />
+                                    <span className="font-bold text-slate-700">{item.item_text}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+
+                      <section className="space-y-4">
+                        <h3 className="font-black text-slate-900 text-lg uppercase tracking-tight">Bukti Gambar (Min 4)</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          {(activeCleanerTask.proof_images || []).map((img, idx) => (
+                            <div key={idx} className="aspect-square rounded-2xl overflow-hidden border border-slate-100 relative group">
+                              <img src={img} className="w-full h-full object-cover" />
+                              <button
+                                onClick={() => {
+                                  const newImgs = activeCleanerTask.proof_images.filter((_, i) => i !== idx);
+                                  setActiveCleanerTask({ ...activeCleanerTask, proof_images: newImgs });
+                                }}
+                                className="absolute top-2 right-2 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center backdrop-blur-sm"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          ))}
+                          {(activeCleanerTask.proof_images || []).length < 8 && (
+                            <label className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-300 hover:border-airbnb hover:text-airbnb transition-all cursor-pointer">
+                              <Camera size={32} />
+                              <span className="text-[10px] font-black uppercase mt-2">Ambil Gambar</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                className="hidden"
+                                onChange={async (e) => {
+                                  const file = e.target.files[0];
+                                  if (!file) return;
+                                  setLoading(true);
+                                  try {
+                                    const fileExt = file.name.split('.').pop();
+                                    const fileName = `${Math.random()}.${fileExt}`;
+                                    const filePath = `proofs/${activeCleanerTask.id}/${fileName}`;
+                                    const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
+                                    if (uploadError) throw uploadError;
+                                    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+                                    const newImgs = [...(activeCleanerTask.proof_images || []), publicUrl];
+                                    setActiveCleanerTask({ ...activeCleanerTask, proof_images: newImgs });
+                                  } catch (err) { alert(err.message); } finally { setLoading(false); }
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+                      </section>
+
+                      <button
+                        disabled={loading || (activeCleanerTask.proof_images || []).length < 4}
+                        onClick={async () => {
+                          setLoading(true);
+                          try {
+                            const { error } = await supabase
+                              .from('cleaning_tasks')
+                              .update({
+                                status: 'completed',
+                                checklist_responses: activeCleanerTask.checklist_responses,
+                                proof_images: activeCleanerTask.proof_images,
+                                completed_at: new Date().toISOString()
+                              })
+                              .eq('id', activeCleanerTask.id);
+                            if (error) throw error;
+                            setActiveCleanerTask({ ...activeCleanerTask, status: 'completed' });
+                          } catch (err) { alert(err.message); } finally { setLoading(false); }
+                        }}
+                        className="w-full py-5 bg-airbnb text-white rounded-[2rem] font-black text-lg shadow-xl shadow-airbnb/20 disabled:grayscale disabled:opacity-50"
+                      >
+                        HANTAR LAPORAN
+                      </button>
+                    </>
+                  )}
+                </main>
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
+                <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-4">
+                  <Plus size={32} className="rotate-45" />
+                </div>
+                <h2 className="text-xl font-black text-slate-900">Tugasan Tidak Dijumpai</h2>
+                <p className="text-slate-500 font-medium">Link ini tidak sah atau tugasan telah dipadam.</p>
+                <button onClick={() => window.location.href = '/'} className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-bold">Ke Dashboard</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Checklist Review Modal */}
+      {reviewTask && (
+        <div className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <header className="p-8 border-b border-slate-50 flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Review Tugasan</h3>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{reviewTask.properties?.name} • {reviewTask.cleaners?.name}</p>
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    await supabase.from('cleaning_tasks').update({ viewed_at: new Date().toISOString() }).eq('id', reviewTask.id);
+                    fetchCleaningTasks();
+                    setReviewTask(null);
+                  } catch (err) { setReviewTask(null); }
+                }}
+                className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all"
+              >
+                <Plus size={24} className="rotate-45" />
+              </button>
+            </header>
+            <div className="flex-1 overflow-y-auto p-8 space-y-8">
+              <div className="grid grid-cols-2 gap-8 text-sm">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Completed At</p>
+                  <p className="font-bold text-slate-700">{new Date(reviewTask.completed_at).toLocaleString()}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Status</p>
+                  <p className="font-bold text-emerald-500 flex items-center gap-2"><CheckCircle size={16} /> Verified</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Checklist Result</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {checklistItems.map(item => (
+                    <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                      {reviewTask.checklist_responses?.[item.id] ? <CheckCircle size={14} className="text-emerald-500" /> : <Plus size={14} className="text-rose-400 rotate-45" />}
+                      <span className={`font-bold ${reviewTask.checklist_responses?.[item.id] ? 'text-slate-700' : 'text-slate-400 line-through'}`}>{item.item_text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Proof Photos</p>
+                <div className="grid grid-cols-2 gap-4">
+                  {(reviewTask.proof_images || []).map((img, i) => (
+                    <div key={i} className="aspect-square rounded-3xl overflow-hidden border border-slate-100 shadow-sm">
+                      <img src={img} className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <footer className="p-8 bg-slate-50 flex gap-4">
+              <button
+                onClick={async () => {
+                  await supabase.from('cleaning_tasks').update({ viewed_at: new Date().toISOString() }).eq('id', reviewTask.id);
+                  fetchCleaningTasks();
+                  setReviewTask(null);
+                }}
+                className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-bold shadow-xl shadow-slate-900/20"
+              >
+                Mark as Reviewed
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
+
+      {/* Checklist Settings Modal */}
+      {showChecklistSettings && (
+        <div className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <header className="p-8 border-b border-slate-50 flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Checklist Settings</h3>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Manage task categories & items</p>
+              </div>
+              <button onClick={() => setShowChecklistSettings(false)} className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
+                <Plus size={24} className="rotate-45" />
+              </button>
+            </header>
+            <div className="flex-1 overflow-y-auto p-8 space-y-6">
+              {['Ruang Tamu', 'Bilik', 'Tandas'].map(cat => (
+                <div key={cat} className="space-y-4">
+                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">{cat}</h4>
+                  <div className="space-y-2">
+                    {checklistItems.filter(i => i.category === cat).map(item => (
+                      <div key={item.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 group">
+                        <span className="font-bold text-slate-700">{item.item_text}</span>
+                        <button
+                          onClick={async () => {
+                            await supabase.from('checklist_items').delete().eq('id', item.id);
+                            fetchChecklistItems();
+                          }}
+                          className="p-2 text-rose-400 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition-all"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder={`Add item to ${cat}...`}
+                        className="flex-1 p-4 rounded-2xl border border-slate-100 bg-white font-bold"
+                        onKeyDown={async (e) => {
+                          if (e.key === 'Enter' && e.target.value) {
+                            await supabase.from('checklist_items').insert([{ category: cat, item_text: e.target.value }]);
+                            e.target.value = '';
+                            fetchChecklistItems();
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {/* Mobile Sidebar */}
       <div className={`fixed inset-0 z-50 md:hidden transition-opacity duration-300 ${sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
         <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
