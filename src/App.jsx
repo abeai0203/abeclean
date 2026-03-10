@@ -131,53 +131,63 @@ const App = () => {
 
   const compressImage = async (file) => {
     // Wait for browser to recover after camera app closes
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise(r => setTimeout(r, 1000));
 
-    return new Promise((resolve) => {
-      const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
-      img.src = objectUrl;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_SIZE = 480;
-        let width = img.width;
-        let height = img.height;
+    try {
+      // Use standard JPEG for maximum compatibility on older Androids
+      const MAX_SIZE = 480;
 
-        if (width > height) {
-          if (width > MAX_SIZE) {
-            height *= MAX_SIZE / width;
-            width = MAX_SIZE;
-          }
-        } else {
-          if (height > MAX_SIZE) {
-            width *= MAX_SIZE / height;
-            height = MAX_SIZE;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.imageSmoothingEnabled = false; // Further reduce memory pressure
-        ctx.drawImage(img, 0, 0, width, height);
+      // Attempt to resize during decoding (Fastest/Least RAM)
+      let bitmap;
+      try {
+        bitmap = await createImageBitmap(file, {
+          resizeWidth: MAX_SIZE,
+          resizeQuality: 'low'
+        });
+      } catch (e) {
+        // Fallback to legacy Image decoding
+        return new Promise((resolve) => {
+          const img = new Image();
+          const url = URL.createObjectURL(file);
+          img.src = url;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ratio = Math.min(MAX_SIZE / img.width, MAX_SIZE / img.height, 1);
+            canvas.width = img.width * ratio;
+            canvas.height = img.height * ratio;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            URL.revokeObjectURL(url);
+            canvas.toBlob((blob) => {
+              resolve(blob ? new File([blob], file.name, { type: 'image/jpeg' }) : file);
+            }, 'image/jpeg', 0.5);
+          };
+          img.onerror = () => resolve(file);
+        });
+      }
 
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bitmap, 0, 0);
+      bitmap.close();
+
+      return new Promise((resolve) => {
         canvas.toBlob((blob) => {
-          URL.revokeObjectURL(objectUrl);
-          img.src = "";
           canvas.width = 0;
           canvas.height = 0;
-
           if (!blob) {
-            resolve(file); // Fallback to original
+            resolve(file);
             return;
           }
-          resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: 'image/webp', lastModified: Date.now() }));
-        }, 'image/webp', 0.4);
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
-        resolve(file); // Fallback
-      };
-    });
+          resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg', lastModified: Date.now() }));
+        }, 'image/jpeg', 0.5);
+      });
+    } catch (e) {
+      console.warn('Compression failed, using original', e);
+      return file;
+    }
   };
 
   const fetchChecklistItems = async () => {
@@ -574,15 +584,15 @@ const App = () => {
                               <input
                                 type="file"
                                 accept="image/*"
-                                capture="environment"
+                                capture="camera"
                                 className="hidden"
                                 onChange={async (e) => {
-                                  const file = e.target.files[0];
+                                  const file = e.target.files?.[0];
                                   if (!file) return;
                                   setLoading(true);
                                   try {
                                     const compressedFile = await compressImage(file);
-                                    const fileExt = 'webp';
+                                    const fileExt = compressedFile.type.split('/')[1] || 'jpg';
                                     const fileName = `${Math.random()}.${fileExt}`;
                                     const filePath = `proofs/${activeCleanerTask.id}/${fileName}`;
                                     const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, compressedFile);
@@ -590,7 +600,10 @@ const App = () => {
                                     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
                                     const newImgs = [...(activeCleanerTask.proof_images || []), publicUrl];
                                     setActiveCleanerTask({ ...activeCleanerTask, proof_images: newImgs });
-                                  } catch (err) { alert(err.message); } finally { setLoading(false); }
+                                  } catch (err) {
+                                    console.error('Upload error:', err);
+                                    alert('Gagal hantar gambar. Sila cuba lagi.');
+                                  } finally { setLoading(false); }
                                 }}
                               />
                             </label>
