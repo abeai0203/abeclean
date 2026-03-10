@@ -530,10 +530,6 @@ const App = () => {
 
       bookings.sort((a, b) => new Date(a.start) - new Date(b.start));
       const updateData = { bookings };
-      if (latestCheckout) {
-        const formattedDate = latestCheckout.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-        updateData.checkout_time = `12:00 PM (${formattedDate})`;
-      }
 
       await supabase.from('properties').update(updateData).eq('id', unit.id);
       alert(`Synced successfully! ${bookings.length} bookings found.`);
@@ -1238,7 +1234,7 @@ const App = () => {
                                 </button>
                                 {task.cleaners?.phone && (
                                   <a
-                                    href={`https://wa.me/${task.cleaners.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`*TUGASAN BARU*\n\nUnit: ${booking.propertyName}\nCheckout: ${properties.find(p => String(p.id) === String(task.property_id))?.checkout_time || '-'}\n\nSahkan Selesai: ${window.location.origin}/?task_id=${task.id}`)}`}
+                                    href={`https://wa.me/${task.cleaners.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`*TUGASAN BARU*\n\nUnit: ${booking.propertyName}\nCheckout: ${properties.find(p => String(p.id) === String(task.property_id))?.checkout_time?.split(' (')[0] || '12:00 PM'} (${new Date(booking.end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })})\n\nSahkan Selesai: ${window.location.origin}/?task_id=${task.id}`)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 hover:bg-emerald-500 hover:text-white hover:shadow-lg hover:shadow-emerald-200 transition-all active:scale-95"
@@ -1327,7 +1323,7 @@ const App = () => {
                                       <div className="flex items-center gap-2">
                                         {task?.cleaners?.phone && (
                                           <a
-                                            href={`https://wa.me/${task.cleaners.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`*TUGASAN BARU*\n\nUnit: ${b.propertyName}\nCheckout: ${properties.find(p => String(p.id) === String(task.property_id))?.checkout_time || '-'}\n\nSahkan Selesai: ${window.location.origin}/?task_id=${task.id}`)}`}
+                                            href={`https://wa.me/${task.cleaners.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`*TUGASAN BARU*\n\nUnit: ${b.propertyName}\nCheckout: ${properties.find(p => String(p.id) === String(task.property_id))?.checkout_time?.split(' (')[0] || '12:00 PM'} (${new Date(b.end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })})\n\nSahkan Selesai: ${window.location.origin}/?task_id=${task.id}`)}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             onClick={(e) => e.stopPropagation()}
