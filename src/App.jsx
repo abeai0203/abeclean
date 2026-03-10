@@ -32,6 +32,7 @@ const App = () => {
   const [notifications, setNotifications] = useState([]);
   const [reviewTask, setReviewTask] = useState(null);
   const [loadingCleanerTask, setLoadingCleanerTask] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const [newUnit, setNewUnit] = useState({
     name: '',
@@ -867,6 +868,55 @@ const App = () => {
                       </div>
                     );
                   })()}
+
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowNotifications(!showNotifications)}
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${notifications.length > 0 ? 'bg-amber-50 text-amber-500 animate-pulse' : 'bg-white border border-slate-100 text-slate-400'}`}
+                    >
+                      <Bell size={20} />
+                      {notifications.length > 0 && (
+                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">
+                          {notifications.length}
+                        </span>
+                      )}
+                    </button>
+
+                    {showNotifications && (
+                      <div className="absolute right-0 mt-3 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 z-[60] overflow-hidden animate-in fade-in slide-in-from-top-2">
+                        <div className="p-4 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Notifications</h4>
+                          <span className="text-[10px] font-black text-airbnb bg-white px-2 py-1 rounded-lg shadow-sm">{notifications.length} New</span>
+                        </div>
+                        <div className="max-h-[400px] overflow-y-auto">
+                          {notifications.length === 0 ? (
+                            <div className="p-10 text-center space-y-2">
+                              <p className="font-bold text-slate-300">Tiada notifikasi baru</p>
+                            </div>
+                          ) : (
+                            notifications.map(n => (
+                              <button
+                                key={n.id}
+                                onClick={() => {
+                                  setReviewTask(n);
+                                  setShowNotifications(false);
+                                }}
+                                className="w-full p-4 text-left border-b border-slate-50 hover:bg-slate-50 transition-colors flex items-center gap-4 group"
+                              >
+                                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0">
+                                  <CheckCircle size={20} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-black text-slate-900 truncate">Selesai: {properties.find(p => String(p.id) === String(n.property_id))?.name || 'Unit'}</p>
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase">{n.cleaners?.name} • {new Date(n.completed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                </div>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   <button onClick={() => setShowNewTaskModal(true)} className="w-full md:w-auto bg-airbnb text-white px-8 py-4 rounded-3xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-airbnb/20 transition-all hover:scale-105 active:scale-95 leading-none">
                     <Plus size={20} strokeWidth={3} /> Add Unit
