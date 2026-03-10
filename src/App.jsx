@@ -597,7 +597,7 @@ const App = () => {
                             <div key={cat} className="space-y-3">
                               <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">{cat}</h4>
                               <div className="space-y-2">
-                                {checklistItems.filter(i => i.category === cat).map(item => (
+                                {checklistItems.filter(i => i.category === cat).map((item, idx) => (
                                   <label key={item.id} className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 bg-slate-50/50 cursor-pointer active:bg-slate-100 transition-colors">
                                     <input
                                       type="checkbox"
@@ -608,7 +608,7 @@ const App = () => {
                                         setActiveCleanerTask({ ...activeCleanerTask, checklist_responses: responses });
                                       }}
                                     />
-                                    <span className="font-bold text-slate-700">{item.item_text}</span>
+                                    <span className="font-bold text-slate-700">{idx + 1}. {item.item_text}</span>
                                   </label>
                                 ))}
                               </div>
@@ -743,10 +743,12 @@ const App = () => {
               <div className="space-y-4">
                 <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Checklist Result</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {checklistItems.map(item => (
+                  {checklistItems.map((item, idx) => (
                     <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs">
                       {reviewTask.checklist_responses?.[item.id] ? <CheckCircle size={14} className="text-emerald-500" /> : <Plus size={14} className="text-rose-400 rotate-45" />}
-                      <span className={`font-bold ${reviewTask.checklist_responses?.[item.id] ? 'text-slate-700' : 'text-slate-400 line-through'}`}>{item.item_text}</span>
+                      <span className={`font-bold ${reviewTask.checklist_responses?.[item.id] ? 'text-slate-700' : 'text-slate-400 line-through'}`}>
+                        {idx + 1}. {item.item_text}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -821,9 +823,9 @@ const App = () => {
                 <div key={cat} className="space-y-4">
                   <h4 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">{cat}</h4>
                   <div className="space-y-2">
-                    {checklistItems.filter(i => i.category === cat).map(item => (
+                    {checklistItems.filter(i => i.category === cat).map((item, idx) => (
                       <div key={item.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 group">
-                        <span className="font-bold text-slate-700">{item.item_text}</span>
+                        <span className="font-bold text-slate-700">{idx + 1}. {item.item_text}</span>
                         <button
                           onClick={async () => {
                             await supabase.from('checklist_items').delete().eq('id', item.id);
