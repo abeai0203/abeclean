@@ -899,10 +899,22 @@ const App = () => {
                 <button
                   key={c.id}
                   onClick={() => handleAssignCleaner(c.id)}
-                  className="w-full flex items-center justify-between p-4 border rounded-2xl hover:bg-airbnb/5 hover:border-airbnb transition-all text-left"
+                  className="w-full flex items-center gap-4 p-4 border rounded-3xl hover:bg-airbnb/5 hover:border-airbnb transition-all text-left group/row"
                 >
-                  <span className="font-bold">{c.name}</span>
-                  <span className="text-[10px] uppercase font-bold text-slate-400">{c.role.replace('_', ' ')}</span>
+                  <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 overflow-hidden border-2 border-white shadow-sm transition-transform group-hover/row:scale-110">
+                    {c.avatar_url ? (
+                      <img src={c.avatar_url} className="w-full h-full object-cover" />
+                    ) : (
+                      <User size={24} />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <span className="block font-black text-slate-700 text-base">{c.name}</span>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.1em]">{c.role.replace('_', ' ')}</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-200 group-hover/row:bg-airbnb group-hover/row:text-white transition-all">
+                    <Plus size={16} />
+                  </div>
                 </button>
               ))}
               {cleaners.length === 0 && (
