@@ -40,7 +40,8 @@ const App = () => {
     name: '',
     phone: '',
     role: 'cleaner',
-    head_cleaner_id: ''
+    head_cleaner_id: '',
+    avatar_url: ''
   });
 
   useEffect(() => {
@@ -89,7 +90,7 @@ const App = () => {
   const fetchCleaningTasks = async () => {
     const { data, error } = await supabase
       .from('cleaning_tasks')
-      .select('*, cleaners(name)');
+      .select('*, cleaners(name, avatar_url)');
 
     if (error) console.error('Error fetching tasks:', error);
     else setCleaningTasks(data || []);
@@ -159,12 +160,14 @@ const App = () => {
         name: editingCleaner.name,
         phone: editingCleaner.phone,
         role: editingCleaner.role,
-        head_cleaner_id: editingCleaner.head_cleaner_id || null
+        head_cleaner_id: editingCleaner.head_cleaner_id || null,
+        avatar_url: editingCleaner.avatar_url || null
       } : {
         name: newCleaner.name,
         phone: newCleaner.phone,
         role: newCleaner.role,
-        head_cleaner_id: newCleaner.head_cleaner_id || null
+        head_cleaner_id: newCleaner.head_cleaner_id || null,
+        avatar_url: newCleaner.avatar_url || null
       };
 
       if (editingCleaner) {
@@ -176,11 +179,43 @@ const App = () => {
       }
 
       setShowCleanerModal(false);
-      setNewCleaner({ name: '', phone: '', role: 'cleaner', head_cleaner_id: '' });
+      setNewCleaner({ name: '', phone: '', role: 'cleaner', head_cleaner_id: '', avatar_url: '' });
       setEditingCleaner(null);
       fetchCleaners();
     } catch (err) {
       alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleAvatarUpload(e, isEditing = false) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setLoading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      if (isEditing) {
+        setEditingCleaner({ ...editingCleaner, avatar_url: publicUrl });
+      } else {
+        setNewCleaner({ ...newCleaner, avatar_url: publicUrl });
+      }
+    } catch (err) {
+      alert('Upload failed: ' + err.message + '\nNote: Please ensure you have created a public bucket named "avatars" in Supabase Storage.');
     } finally {
       setLoading(false);
     }
@@ -473,8 +508,12 @@ const App = () => {
                             className={`flex items-center gap-4 text-slate-500 cursor-pointer p-2 -m-2 rounded-2xl transition-all hover:bg-slate-50 ${!task ? 'animate-pulse' : ''}`}
                             onClick={() => nextBooking && openAssignModal({ ...nextBooking, propertyId: property.id })}
                           >
-                            <div className="w-10 h-10 rounded-2xl bg-pink-50 flex items-center justify-center text-airbnb group-hover:scale-110 transition-transform">
-                              <User size={20} />
+                            <div className="w-10 h-10 rounded-full bg-pink-50 flex items-center justify-center text-airbnb group-hover:scale-110 transition-all overflow-hidden border border-pink-100 shadow-sm">
+                              {task?.cleaners?.avatar_url ? (
+                                <img src={task.cleaners.avatar_url} className="w-full h-full object-cover" />
+                              ) : (
+                                <User size={20} />
+                              )}
                             </div>
                             <div>
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Next Assignee</p>
@@ -635,7 +674,13 @@ const App = () => {
                             {task ? (
                               <button onClick={() => openAssignModal(booking)} className="flex items-center gap-3 px-5 py-3 bg-white border border-slate-200 rounded-2xl hover:border-airbnb hover:shadow-lg transition-all relative overflow-hidden group/btn">
                                 <div className="absolute inset-x-0 bottom-0 h-0.5 bg-airbnb origin-left scale-x-0 group-hover/btn:scale-x-100 transition-transform duration-500"></div>
-                                <div className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center text-airbnb"><User size={16} /></div>
+                                <div className="w-8 h-8 rounded-full bg-pink-50 flex items-center justify-center text-airbnb overflow-hidden border border-pink-100 shadow-sm">
+                                  {task.cleaners?.avatar_url ? (
+                                    <img src={task.cleaners.avatar_url} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <User size={16} />
+                                  )}
+                                </div>
                                 <div className="text-left">
                                   <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none">Assignee</p>
                                   <p className="text-sm font-black text-slate-700">{task.cleaners?.name}</p>
@@ -745,8 +790,12 @@ const App = () => {
                 {cleaners.map(cleaner => (
                   <div key={cleaner.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all relative overflow-hidden">
                     <div className="flex items-center gap-4 mb-4">
-                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg ${cleaner.role === 'head_cleaner' ? 'bg-slate-900' : 'bg-airbnb'}`}>
-                        {cleaner.role === 'head_cleaner' ? <ShieldCheck size={28} /> : <User size={28} />}
+                      <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl overflow-hidden border-2 ${cleaner.avatar_url ? 'border-white' : (cleaner.role === 'head_cleaner' ? 'bg-slate-900 border-slate-200' : 'bg-airbnb border-pink-100')}`}>
+                        {cleaner.avatar_url ? (
+                          <img src={cleaner.avatar_url} className="w-full h-full object-cover" />
+                        ) : (
+                          cleaner.role === 'head_cleaner' ? <ShieldCheck size={28} /> : <User size={28} />
+                        )}
                       </div>
                       <div>
                         <h4 className="font-black text-slate-900 leading-tight">{cleaner.name}</h4>
@@ -811,6 +860,21 @@ const App = () => {
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-in fade-in zoom-in duration-200">
             <h3 className="text-2xl font-bold mb-6">{editingCleaner ? 'Edit Cleaner' : 'New Cleaner'}</h3>
             <form onSubmit={handleCleanerSubmit} className="space-y-4">
+              <div className="flex justify-center mb-6">
+                <div className="relative group">
+                  <div className="w-24 h-24 rounded-full bg-slate-100 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center text-slate-300">
+                    {(editingCleaner?.avatar_url || newCleaner.avatar_url) ? (
+                      <img src={editingCleaner?.avatar_url || newCleaner.avatar_url} className="w-full h-full object-cover" />
+                    ) : (
+                      <User size={40} />
+                    )}
+                  </div>
+                  <label className="absolute bottom-0 right-0 w-8 h-8 bg-airbnb text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform">
+                    <Plus size={16} strokeWidth={3} />
+                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleAvatarUpload(e, !!editingCleaner)} />
+                  </label>
+                </div>
+              </div>
               <input type="text" required placeholder="Name" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={editingCleaner ? editingCleaner.name : newCleaner.name} onChange={e => editingCleaner ? setEditingCleaner({ ...editingCleaner, name: e.target.value }) : setNewCleaner({ ...newCleaner, name: e.target.value })} />
               <input type="text" placeholder="Phone" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={editingCleaner ? editingCleaner.phone : newCleaner.phone} onChange={e => editingCleaner ? setEditingCleaner({ ...editingCleaner, phone: e.target.value }) : setNewCleaner({ ...newCleaner, phone: e.target.value })} />
               <div className="grid grid-cols-2 gap-4">
