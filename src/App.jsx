@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
-import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, RotateCw, Calendar, CheckCircle, Trash2, ShieldCheck, ChevronDown, MessageCircle, Bell, Camera } from 'lucide-react';
+import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, RotateCw, RotateCcw, Calendar, CheckCircle, Trash2, ShieldCheck, ChevronDown, MessageCircle, Bell, Camera } from 'lucide-react';
 
 const App = () => {
   const [view, setView] = useState('dashboard');
@@ -467,6 +467,30 @@ const App = () => {
     }
   }
 
+  const handleResetTask = async (taskId) => {
+    if (!confirm('Adakah anda pasti nak reset tugasan ini? Semua checklist dan gambar bukti akan dibuang.')) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('cleaning_tasks')
+        .update({
+          status: 'pending',
+          checklist_responses: null,
+          proof_images: [],
+          completed_at: null,
+          viewed_at: null
+        })
+        .eq('id', taskId);
+      if (error) throw error;
+      await fetchCleaningTasks();
+      setReviewTask(null);
+    } catch (err) {
+      alert('Reset failed: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const handleImageUpload = async (file) => {
     if (!file || !activeCleanerTask) return;
 
@@ -715,18 +739,27 @@ const App = () => {
                 <h3 className="text-2xl font-black text-slate-900 tracking-tight">Review Tugasan</h3>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{reviewTask.properties?.name} • {reviewTask.cleaners?.name}</p>
               </div>
-              <button
-                onClick={async () => {
-                  try {
-                    await supabase.from('cleaning_tasks').update({ viewed_at: new Date().toISOString() }).eq('id', reviewTask.id);
-                    fetchCleaningTasks();
-                    setReviewTask(null);
-                  } catch (err) { setReviewTask(null); }
-                }}
-                className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all"
-              >
-                <Plus size={24} className="rotate-45" />
-              </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleResetTask(reviewTask.id)}
+                    className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-500 hover:bg-rose-100 transition-all shadow-sm"
+                    title="Reset Tugasan"
+                  >
+                    <RotateCcw size={20} />
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await supabase.from('cleaning_tasks').update({ viewed_at: new Date().toISOString() }).eq('id', reviewTask.id);
+                        fetchCleaningTasks();
+                        setReviewTask(null);
+                      } catch (err) { setReviewTask(null); }
+                    }}
+                    className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all"
+                  >
+                    <Plus size={24} className="rotate-45" />
+                  </button>
+                </div>
             </header>
             <div className="flex-1 overflow-y-auto p-8 space-y-8">
               <div className="grid grid-cols-2 gap-8 text-sm">
@@ -1458,12 +1491,21 @@ const App = () => {
                           </div>
                         </div>
                       </div>
-                      <button
-                        onClick={() => setReviewTask(task)}
-                        className="px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-slate-900/10"
-                      >
-                        Lihat Report
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => handleResetTask(task.id)}
+                          className="w-12 h-12 flex items-center justify-center bg-slate-50 text-slate-400 rounded-2xl hover:text-rose-500 hover:bg-rose-50 transition-all"
+                          title="Reset Tugasan"
+                        >
+                          <RotateCcw size={18} />
+                        </button>
+                        <button
+                          onClick={() => setReviewTask(task)}
+                          className="px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-slate-900/10"
+                        >
+                          Lihat Report
+                        </button>
+                      </div>
                     </div>
                   ))}
 
