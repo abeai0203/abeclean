@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
-import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, RotateCw, RotateCcw, Calendar, CheckCircle, Trash2, ShieldCheck, ChevronDown, MessageCircle, Bell, Camera } from 'lucide-react';
+import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, RotateCw, RotateCcw, Calendar, CheckCircle, Trash2, ShieldCheck, ChevronDown, MessageCircle, Bell, Camera, Banknote } from 'lucide-react';
 
 const App = () => {
   const [view, setView] = useState('dashboard');
@@ -41,6 +41,7 @@ const App = () => {
     priority: 'Normal',
     checkout_time: '12:00 PM',
     ical_url: '',
+    cleaning_fee: 45,
     bookings: []
   });
 
@@ -913,6 +914,9 @@ const App = () => {
             <button onClick={() => { setView('history'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'history' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
               <Clock size={20} /> <span className="font-semibold text-sm">History</span>
             </button>
+            <button onClick={() => { setView('payments'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'payments' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
+              <Banknote size={20} /> <span className="font-semibold text-sm">Payments</span>
+            </button>
             <button
               onClick={() => { setView('settings'); setSidebarOpen(false); }}
               className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group ${view === 'settings' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}
@@ -956,6 +960,9 @@ const App = () => {
           </button>
           <button onClick={() => { setView('history'); setFilterArea('all'); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'history' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
             <Clock size={20} /> <span className="font-semibold text-sm">History</span>
+          </button>
+          <button onClick={() => { setView('payments'); setFilterArea('all'); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'payments' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
+            <Banknote size={20} /> <span className="font-semibold text-sm">Payments</span>
           </button>
           <button onClick={() => setShowChecklistSettings(true)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 transition-all">
             <CheckCircle size={20} /> <span className="font-semibold text-sm">Checklist</span>
@@ -1473,49 +1480,115 @@ const App = () => {
                 {cleaningTasks
                   .filter(t => t.status === 'completed')
                   .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
-                  .map((task, idx) => (
-                    <div key={task.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:shadow-xl">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center border border-emerald-100">
-                          <CheckCircle size={28} />
+                  .map(task => (
+                    <div key={task.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 overflow-hidden relative group">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-bl-[4rem] -mr-8 -mt-8 transition-all group-hover:scale-110 group-hover:bg-pink-50/50"></div>
+                      <div className="flex items-center gap-5 relative">
+                        <div className="w-16 h-16 rounded-3xl bg-slate-900 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center text-white">
+                          <CheckCircle size={32} className="text-emerald-400" />
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-black text-slate-900 text-lg">{task.properties?.name}</h4>
-                            <span className="px-2 py-0.5 bg-slate-100 text-[8px] font-black uppercase text-slate-400 rounded-lg tracking-[0.15em]">{task.properties?.area}</span>
-                          </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs font-bold text-slate-400">
-                            <p className="flex items-center gap-1.5"><User size={12} className="text-airbnb" /> {task.cleaners?.name}</p>
-                            <span>•</span>
-                            <p className="flex items-center gap-1.5"><Clock size={12} className="text-airbnb" /> {new Date(task.completed_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                          <h4 className="font-black text-slate-900 text-lg leading-tight">{task.properties?.name}</h4>
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">{task.properties?.area}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden border border-white shadow-sm">
+                              {task.cleaners?.avatar_url ? <img src={task.cleaners.avatar_url} className="w-full h-full object-cover" /> : <User size={12} />}
+                            </div>
+                            <span className="text-xs font-black text-slate-600">{task.cleaners?.name}</span>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => handleResetTask(task.id)}
-                          className="w-12 h-12 flex items-center justify-center bg-slate-50 text-slate-400 rounded-2xl hover:text-rose-500 hover:bg-rose-50 transition-all"
-                          title="Reset Tugasan"
-                        >
-                          <RotateCcw size={18} />
-                        </button>
-                        <button
-                          onClick={() => setReviewTask(task)}
-                          className="px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-slate-900/10"
-                        >
-                          Lihat Report
-                        </button>
+
+                      <div className="flex flex-col md:flex-row md:items-center gap-6 relative">
+                        <div className="text-left md:text-right">
+                          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Completed At</p>
+                          <p className="text-sm font-black text-slate-700">{new Date(task.completed_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                          <p className="text-[10px] font-bold text-slate-400">{new Date(task.completed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleResetTask(task.id)}
+                            className="w-12 h-12 flex items-center justify-center bg-slate-50 text-slate-400 rounded-2xl hover:text-rose-500 hover:bg-rose-50 transition-all"
+                            title="Reset Tugasan"
+                          >
+                            <RotateCcw size={18} />
+                          </button>
+                          <button
+                            onClick={() => setReviewTask(task)}
+                            className="px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-slate-900/10"
+                          >
+                            Lihat Report
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
-
                 {cleaningTasks.filter(t => t.status === 'completed').length === 0 && (
-                  <div className="bg-white rounded-[3rem] p-20 text-center border border-slate-100 h-full flex flex-col items-center justify-center">
-                    <div className="w-20 h-20 bg-slate-50 text-slate-200 rounded-[2rem] flex items-center justify-center mb-6"><Clock size={40} /></div>
-                    <h3 className="text-xl font-bold text-slate-400">Belum ada sejarah tugasan</h3>
-                    <p className="text-slate-400 text-sm mt-2 max-w-xs mx-auto">Tugasan yang telah selesai akan dipaparkan di sini untuk rujukan anda.</p>
+                  <div className="bg-white rounded-[2.5rem] p-20 text-center border border-slate-100">
+                    <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-3xl flex items-center justify-center mx-auto mb-6"><Clock size={32} /></div>
+                    <h3 className="text-xl font-bold text-slate-400">Belum ada tugasan selesai</h3>
                   </div>
                 )}
+              </div>
+            </>
+          )}
+
+          {view === 'payments' && (
+            <>
+              <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-slate-600 hover:bg-white rounded-lg"><Menu size={24} /></button>
+                  <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Payments & Earnings</h2>
+                </div>
+              </header>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {cleaners.map(cleaner => {
+                  const tasks = cleaningTasks.filter(t => t.cleaner_id === cleaner.id && t.status === 'completed');
+                  const totalEarnings = tasks.reduce((sum, t) => {
+                    const fee = t.properties?.cleaning_fee || 45;
+                    return sum + parseFloat(fee);
+                  }, 0);
+
+                  return (
+                    <div key={cleaner.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-[5rem] -mr-12 -mt-12 transition-all group-hover:scale-110 group-hover:bg-emerald-100/50"></div>
+                      
+                      <div className="flex items-center gap-4 mb-6 relative">
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl overflow-hidden border-2 ${cleaner.avatar_url ? 'border-white' : 'bg-slate-900 border-slate-100'}`}>
+                          {cleaner.avatar_url ? <img src={cleaner.avatar_url} className="w-full h-full object-cover" /> : <User size={28} />}
+                        </div>
+                        <div>
+                          <h4 className="font-black text-slate-900 leading-tight text-lg">{cleaner.name}</h4>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{cleaner.role.replace('_', ' ')}</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 relative">
+                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Accumulated Earnings</p>
+                          <p className="text-3xl font-black text-emerald-600">RM {totalEarnings.toFixed(2)}</p>
+                        </div>
+
+                        <div className="flex justify-between items-center px-2">
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Completed Jobs</span>
+                          <span className="text-sm font-black text-slate-700">{tasks.length} Units</span>
+                        </div>
+
+                        <button 
+                          onClick={() => {
+                            // Optionally we could show a details modal here
+                            // For now, let's just alert a summary or just leave it as is if users just want the total
+                            alert(`Breakdown for ${cleaner.name}:\n${tasks.map(t => `- ${t.properties?.name} (RM ${t.properties?.cleaning_fee || 45})`).join('\n') || 'No tasks'}`);
+                          }}
+                          className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all"
+                        >
+                          Lihat Detail
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </>
           )}
@@ -1554,6 +1627,10 @@ const App = () => {
                   <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.priority} onChange={e => setSelectedUnit({ ...selectedUnit, priority: e.target.value })}><option>Normal</option><option>High</option></select>
                 </div>
                 <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.status} onChange={e => setSelectedUnit({ ...selectedUnit, status: e.target.value })}><option>Ready</option><option>Cleaning</option><option>Maintenance</option></select>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Cleaning Fee (RM)</label>
+                  <input type="number" required placeholder="Cleaning Fee (RM)" className="w-full bg-slate-50 border rounded-xl px-4 py-3 font-bold" value={selectedUnit.cleaning_fee || ''} onChange={e => setSelectedUnit({ ...selectedUnit, cleaning_fee: parseFloat(e.target.value) })} />
+                </div>
                 <input type="text" placeholder="iCal URL" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.ical_url || ''} onChange={e => setSelectedUnit({ ...selectedUnit, ical_url: e.target.value })} />
                 <div className="flex gap-3 pt-4"><button type="button" onClick={handleDeleteUnit} className="flex-1 bg-rose-50 text-rose-500 py-4 rounded-xl font-bold">Delete</button><button type="submit" className="flex-1 bg-airbnb text-white py-4 rounded-xl font-bold">Save</button></div>
                 <button type="button" onClick={() => setShowManageModal(false)} className="w-full text-slate-400 font-bold py-2">Close</button>
