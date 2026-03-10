@@ -160,22 +160,14 @@ const App = () => {
   };
 
   const compressImage = async (file) => {
-    // Detect Android to avoid heavy canvas ops that cause "low memory" crash
-    const isAndroid = /Android/i.test(navigator.userAgent);
-
-    if (isAndroid) {
-      console.log('Android detected: Skipping compression to save memory.');
-      return file;
-    }
-
-    // Wait for browser to recover after camera app closes
-    await new Promise(r => setTimeout(r, 1000));
+    // Wait longer for browser/OS to recover after camera-to-browser transition
+    // Especially important for high-spec phones with heavy camera apps like Honor
+    await new Promise(r => setTimeout(r, 1500));
 
     try {
-      // Use standard JPEG for maximum compatibility
-      const MAX_SIZE = 480;
+      const MAX_SIZE = 512;
 
-      // Attempt to resize during decoding (Fastest/Least RAM)
+      // Attempt modern createImageBitmap resize
       let bitmap;
       try {
         bitmap = await createImageBitmap(file, {
@@ -644,14 +636,21 @@ const App = () => {
                             </div>
                           ))}
                           {(activeCleanerTask.proof_images || []).length < 8 && (
-                            <label className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-300 hover:border-airbnb hover:text-airbnb transition-all cursor-pointer">
-                              <Camera size={32} />
-                              <span className="text-[10px] font-black uppercase mt-2">Ambil Gambar</span>
+                            <label className={`aspect-square rounded-2xl border-2 border-dashed ${loading ? 'border-slate-100 bg-slate-50' : 'border-slate-200'} flex flex-col items-center justify-center text-slate-300 hover:border-airbnb hover:text-airbnb transition-all cursor-pointer`}>
+                              {loading ? (
+                                <div className="w-8 h-8 border-2 border-slate-200 border-t-airbnb rounded-full animate-spin" />
+                              ) : (
+                                <>
+                                  <Camera size={32} />
+                                  <span className="text-[10px] font-black uppercase mt-2">Ambil Gambar</span>
+                                </>
+                              )}
                               <input
                                 type="file"
                                 accept="image/*"
                                 capture="environment"
                                 className="hidden"
+                                disabled={loading}
                                 onChange={(e) => {
                                   const file = e.target.files?.[0];
                                   if (file) handleImageUpload(file);
