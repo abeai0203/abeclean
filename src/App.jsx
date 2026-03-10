@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
-import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, RotateCw, Calendar, CheckCircle, Trash2, ShieldCheck, ChevronDown, MessageCircle } from 'lucide-react';
+import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, RotateCw, Calendar, CheckCircle, Trash2, ShieldCheck, ChevronDown, MessageCircle, Bell, Camera } from 'lucide-react';
 
 const App = () => {
   const [view, setView] = useState('dashboard');
@@ -26,6 +26,11 @@ const App = () => {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [editingCleaner, setEditingCleaner] = useState(null);
   const [activePopoverDate, setActivePopoverDate] = useState(null);
+  const [checklistItems, setChecklistItems] = useState([]);
+  const [activeCleanerTask, setActiveCleanerTask] = useState(null);
+  const [showChecklistSettings, setShowChecklistSettings] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [reviewTask, setReviewTask] = useState(null);
 
   const [newUnit, setNewUnit] = useState({
     name: '',
@@ -50,7 +55,15 @@ const App = () => {
     const subscription = supabase
       .channel('schema-db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'properties' }, fetchProperties)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cleaning_tasks' }, fetchCleaningTasks)
       .subscribe();
+
+    // Check for task_id in URL for cleaner mode
+    const params = new URLSearchParams(window.location.search);
+    const taskId = params.get('task_id');
+    if (taskId) {
+      loadCleanerTask(taskId);
+    }
 
     return () => supabase.removeChannel(subscription);
   }, []);
@@ -71,7 +84,8 @@ const App = () => {
       await Promise.all([
         fetchProperties(),
         fetchCleaners(),
-        fetchCleaningTasks()
+        fetchCleaningTasks(),
+        fetchChecklistItems()
       ]);
     } finally {
       setLoading(false);
@@ -104,7 +118,43 @@ const App = () => {
       .select('*, cleaners(name, avatar_url, phone)');
 
     if (error) console.error('Error fetching tasks:', error);
-    else setCleaningTasks(data || []);
+    else {
+      setCleaningTasks(data || []);
+      // Update notifications: tasks completed but not viewed
+      const unviewed = (data || []).filter(t => t.completed_at && !t.viewed_at);
+      setNotifications(unviewed);
+    }
+  };
+
+  const fetchChecklistItems = async () => {
+    const { data, error } = await supabase
+      .from('checklist_items')
+      .select('*')
+      .order('category', { ascending: false });
+
+    if (error) {
+      console.warn('Checklist items table might not exist yet:', error.message);
+      // Fallback suggested items if table doesn't exist
+      setChecklistItems([
+        { id: 1, category: 'Ruang Tamu', item_text: 'Vakum/Mop lantai' },
+        { id: 2, category: 'Ruang Tamu', item_text: 'Lap meja & kabinet' },
+        { id: 3, category: 'Bilik', item_text: 'Tukar cadar & sarung bantal' },
+        { id: 4, category: 'Tandas', item_text: 'Cuci mangkuk tandas' }
+      ]);
+    } else {
+      setChecklistItems(data || []);
+    }
+  };
+
+  const loadCleanerTask = async (taskId) => {
+    const { data, error } = await supabase
+      .from('cleaning_tasks')
+      .select('*, cleaners(name, phone), properties(*)')
+      .eq('id', taskId)
+      .single();
+
+    if (error) console.error('Error loading cleaner task:', error);
+    else setActiveCleanerTask(data);
   };
 
   async function handleAddUnit(e) {
@@ -377,6 +427,20 @@ const App = () => {
             </button>
             <button onClick={() => { setView('calendar'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'calendar' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
               <Calendar size={20} /> <span className="font-semibold text-sm">Calendar</span>
+            </button>
+            <button
+              onClick={() => { setView('settings'); setSidebarOpen(false); }}
+              className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group ${view === 'settings' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+              <div className={`p-2 rounded-xl transition-all duration-300 ${view === 'settings' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-airbnb shadow-sm'}`}><Sparkles size={18} /></div>
+              Settings
+            </button>
+            <button
+              onClick={() => { setShowChecklistSettings(true); setSidebarOpen(false); }}
+              className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group text-slate-500 hover:bg-slate-50`}
+            >
+              <div className={`p-2 rounded-xl transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-airbnb shadow-sm`}><CheckCircle size={18} /></div>
+              Checklist
             </button>
             <button onClick={() => { setView('cleaners'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'cleaners' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
               <Users size={20} /> <span className="font-semibold text-sm">Cleaners</span>
@@ -701,7 +765,7 @@ const App = () => {
                                 </button>
                                 {task.cleaners?.phone && (
                                   <a
-                                    href={`https://wa.me/${task.cleaners.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`*TUGASAN BARU*\n\nUnit: ${booking.propertyName}\nCheckout: ${properties.find(p => String(p.id) === String(task.property_id))?.checkout_time || '-'}`)}`}
+                                    href={`https://wa.me/${task.cleaners.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`*TUGASAN BARU*\n\nUnit: ${booking.propertyName}\nCheckout: ${properties.find(p => String(p.id) === String(task.property_id))?.checkout_time || '-'}\n\nSahkan Selesai: ${window.location.origin}/?task_id=${task.id}`)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 hover:bg-emerald-500 hover:text-white hover:shadow-lg hover:shadow-emerald-200 transition-all active:scale-95"
@@ -790,7 +854,7 @@ const App = () => {
                                       <div className="flex items-center gap-2">
                                         {task?.cleaners?.phone && (
                                           <a
-                                            href={`https://wa.me/${task.cleaners.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`*TUGASAN BARU*\n\nUnit: ${b.propertyName}\nCheckout: ${properties.find(p => String(p.id) === String(task.property_id))?.checkout_time || '-'}`)}`}
+                                            href={`https://wa.me/${task.cleaners.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`*TUGASAN BARU*\n\nUnit: ${b.propertyName}\nCheckout: ${properties.find(p => String(p.id) === String(task.property_id))?.checkout_time || '-'}\n\nSahkan Selesai: ${window.location.origin}/?task_id=${task.id}`)}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             onClick={(e) => e.stopPropagation()}
