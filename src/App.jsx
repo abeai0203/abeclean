@@ -1078,28 +1078,8 @@ const App = () => {
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Next Checkout</p>
                               <p className="text-sm font-black text-slate-700">
                                 {nextBooking
-                                  ? `${property.checkout_time || '12:00 PM'} (${new Date(nextBooking.end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })})`
+                                  ? `${property.checkout_time || '12:00 PM'} • ${new Date(nextBooking.end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}`
                                   : 'No upcoming checkout'}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div
-                            className={`flex items-center gap-4 text-slate-500 cursor-pointer p-2 -m-2 rounded-2xl transition-all hover:bg-slate-50 ${!task ? 'animate-pulse' : ''}`}
-                            onClick={() => nextBooking && openAssignModal({ ...nextBooking, propertyId: property.id })}
-                          >
-                            <div className="w-10 h-10 rounded-full bg-pink-50 flex items-center justify-center text-airbnb group-hover:scale-110 transition-all overflow-hidden border border-pink-100 shadow-sm">
-                              {task?.cleaners?.avatar_url ? (
-                                <img src={task.cleaners.avatar_url} className="w-full h-full object-cover" />
-                              ) : (
-                                <User size={20} />
-                              )}
-                            </div>
-                            <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Next Assignee</p>
-                              <p className="text-sm font-black text-slate-700 flex items-center gap-2">
-                                {task ? task.cleaners?.name : <span className="text-slate-300 italic">Unassigned</span>}
-                                <Plus size={12} className="text-slate-300" />
                               </p>
                             </div>
                           </div>
@@ -1128,11 +1108,22 @@ const App = () => {
                                     className={`flex justify-between items-center px-4 py-2.5 rounded-xl border transition-all ${isPast ? 'bg-slate-50/50 border-slate-100 text-slate-400 opacity-60' : 'bg-white border-slate-100 text-slate-600 shadow-sm cursor-pointer hover:border-airbnb hover:scale-[1.02] active:scale-95'}`}
                                   >
                                     <div className="flex items-center gap-3">
+                                      {isAssigned && (
+                                        <div className="w-6 h-6 rounded-full overflow-hidden border border-white shadow-sm -ml-1">
+                                          {bookingTask.cleaners?.avatar_url ? (
+                                            <img src={bookingTask.cleaners.avatar_url} className="w-full h-full object-cover" />
+                                          ) : (
+                                            <div className="w-full h-full bg-slate-50 flex items-center justify-center text-slate-400 text-[8px]">
+                                              <User size={10} />
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
                                       <div className={`w-1.5 h-1.5 rounded-full ${isPast ? 'bg-slate-300' :
                                         isAssigned ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
                                           'bg-airbnb animate-pulse'
                                         }`}></div>
-                                      <span className="text-[11px] font-bold">
+                                      <span className="text-[10px] font-bold">
                                         {new Date(b.start).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} - {end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                                       </span>
                                     </div>
