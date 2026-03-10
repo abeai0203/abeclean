@@ -310,7 +310,8 @@ const App = () => {
     setLoading(true);
     try {
       // 1. Register User in Supabase
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      console.log('Attempting sign up for:', onboardingData.email);
+      let { data: authData, error: authError } = await supabase.auth.signUp({
         email: onboardingData.email,
         password: onboardingData.password,
         options: {
@@ -321,8 +322,20 @@ const App = () => {
         }
       });
 
+      // If already registered but not signed in (common during testing)
+      if (authError && authError.message.toLowerCase().includes('already registered')) {
+         console.warn('User already exists, attempting sign in instead...');
+         const { data: logInData, error: logInError } = await supabase.auth.signInWithPassword({
+            email: onboardingData.email,
+            password: onboardingData.password
+         });
+         if (logInError) throw logInError;
+         authData = logInData;
+         authError = null;
+      }
+
       if (authError) throw authError;
-      if (!authData.user) throw new Error('Registration failed. Please try again.');
+      if (!authData.user) throw new Error('Registration failed. Please check your email or try a different one.');
 
       const ownerId = authData.user.id;
       console.log('User registered with ID:', ownerId);
@@ -697,13 +710,18 @@ const App = () => {
           
           <button 
             onClick={() => {
+              console.log('Onboarding Step:', onboardingStep, 'Completing...');
               if (onboardingStep === 4) handleOnboardingComplete();
               else setOnboardingStep(onboardingStep + 1);
             }}
-            disabled={onboardingStep === 1 && !onboardingData.businessName}
+            disabled={
+              loading ||
+              (onboardingStep === 1 && (!onboardingData.businessName || !onboardingData.email || !onboardingData.password)) ||
+              (onboardingStep === 2 && !onboardingData.propertyName)
+            }
             className={`px-12 py-5 rounded-2xl font-black text-sm uppercase tracking-widest text-white shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-30 disabled:scale-100 ${onboardingStep === 4 ? 'bg-emerald-500 shadow-emerald-200' : 'bg-airbnb shadow-airbnb/20'}`}
           >
-            {onboardingStep === totalSteps ? 'Complete Setup' : 'Next Step'}
+            {loading ? 'Sila tunggu...' : (onboardingStep === 4 ? 'Complete Setup' : 'Next Step')}
           </button>
         </footer>
       </div>
