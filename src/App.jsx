@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
-import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, X, RotateCw, Calendar, CheckCircle, Image, Trash2, ShieldCheck, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, RotateCw, Calendar, CheckCircle, Trash2, ShieldCheck, ChevronDown } from 'lucide-react';
 
 const App = () => {
   const [view, setView] = useState('dashboard');
@@ -18,14 +18,12 @@ const App = () => {
   const [showManageModal, setShowManageModal] = useState(false);
   const [showCleanerModal, setShowCleanerModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [showTaskModal, setShowTaskModal] = useState(false);
 
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [calendarMode, setCalendarMode] = useState('list'); // 'list' or 'grid'
 
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
-  const [selectedTask, setSelectedTask] = useState(null);
   const [editingCleaner, setEditingCleaner] = useState(null);
 
   const [newUnit, setNewUnit] = useState({
@@ -258,34 +256,6 @@ const App = () => {
     } finally {
       setLoading(false);
     }
-  }
-
-  async function handleTaskUpdate(taskId, updates) {
-    const { error } = await supabase.from('cleaning_tasks').update(updates).eq('id', taskId);
-    if (!error) {
-      if (selectedTask?.id === taskId) setSelectedTask({ ...selectedTask, ...updates });
-      fetchCleaningTasks();
-    }
-  }
-
-  async function handleToggleChecklist(itemIdx) {
-    const newChecklist = [...selectedTask.checklist];
-    newChecklist[itemIdx].done = !newChecklist[itemIdx].done;
-
-    const allDone = newChecklist.every(i => i.done);
-    const updates = {
-      checklist: newChecklist,
-      status: allDone ? 'completed' : 'pending',
-      completed_at: allDone ? new Date().toISOString() : null
-    };
-
-    handleTaskUpdate(selectedTask.id, updates);
-  }
-
-  async function handleImageUpload() {
-    const dummyUrl = `https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400&q=80`;
-    const newImages = [...(selectedTask.proof_images || []), dummyUrl].slice(0, 3);
-    handleTaskUpdate(selectedTask.id, { proof_images: newImages });
   }
 
   async function syncAirbnb(unit) {
@@ -664,7 +634,7 @@ const App = () => {
                           <div className="flex items-center gap-3">
                             {task ? (
                               <div className="flex items-center gap-2">
-                                <button onClick={() => { setSelectedTask(task); setShowTaskModal(true); }} className="flex items-center gap-3 px-5 py-3 bg-white border border-slate-200 rounded-2xl hover:border-airbnb hover:shadow-lg transition-all relative overflow-hidden group/btn">
+                                <button onClick={() => openAssignModal(booking)} className="flex items-center gap-3 px-5 py-3 bg-white border border-slate-200 rounded-2xl hover:border-airbnb hover:shadow-lg transition-all relative overflow-hidden group/btn">
                                   <div className="absolute inset-x-0 bottom-0 h-0.5 bg-airbnb origin-left scale-x-0 group-hover/btn:scale-x-100 transition-transform duration-500"></div>
                                   <div className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center text-airbnb"><User size={16} /></div>
                                   <div className="text-left">
@@ -892,36 +862,6 @@ const App = () => {
         </div>
       )}
 
-      {showTaskModal && selectedTask && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center mb-6"><div><h3 className="text-2xl font-bold">Checklist</h3><p className="text-xs text-slate-400 uppercase font-black">{selectedTask.cleaners?.name}</p></div><button onClick={() => setShowTaskModal(false)} className="text-slate-400"><X size={24} /></button></div>
-            <div className="space-y-4">
-              <div className="bg-slate-50 p-4 rounded-2xl border mb-6">
-                {selectedTask.checklist?.map((item, idx) => (
-                  <button key={idx} onClick={() => handleToggleChecklist(idx)} className="w-full flex items-center gap-3 py-3 border-b border-slate-100 last:border-0">
-                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${item.done ? 'bg-green-500 text-white' : 'bg-white border-2'}`}>{item.done && <CheckCircle size={14} />}</div>
-                    <span className={`text-sm font-bold ${item.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{item.task}</span>
-                  </button>
-                ))}
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-3 text-center">Proof of Cleaning</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {selectedTask.proof_images?.map((url, idx) => (
-                    <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group">
-                      <img src={url} className="w-full h-full object-cover" />
-                      <button onClick={() => handleTaskUpdate(selectedTask.id, { proof_images: selectedTask.proof_images.filter((_, i) => i !== idx) })} className="absolute top-1 right-1 bg-white p-1 rounded-md text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12} /></button>
-                    </div>
-                  ))}
-                  {(selectedTask.proof_images || []).length < 3 && <button onClick={handleImageUpload} className="aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center text-slate-400 hover:border-airbnb hover:text-airbnb transition-all"><Image size={20} /><span className="text-[10px] font-bold mt-1">Upload</span></button>}
-                </div>
-              </div>
-              {selectedTask.status === 'completed' && <div className="mt-8 p-4 bg-green-50 rounded-2xl text-green-700 text-center font-bold text-sm">Successfully Verified & Completed</div>}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
