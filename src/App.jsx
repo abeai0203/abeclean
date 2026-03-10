@@ -131,52 +131,53 @@ const App = () => {
 
   const compressImage = async (file) => {
     // Wait for browser to recover after camera app closes
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 800));
 
-    try {
-      const MAX_SIZE = 480; // Ultra low for extreme stability
-      let img = await createImageBitmap(file);
+    return new Promise((resolve) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.src = objectUrl;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 480;
+        let width = img.width;
+        let height = img.height;
 
-      let width = img.width;
-      let height = img.height;
-      if (width > height) {
-        if (width > MAX_SIZE) {
-          height *= MAX_SIZE / width;
-          width = MAX_SIZE;
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
         }
-      } else {
-        if (height > MAX_SIZE) {
-          width *= MAX_SIZE / height;
-          height = MAX_SIZE;
-        }
-      }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false; // Further reduce memory pressure
+        ctx.drawImage(img, 0, 0, width, height);
 
-      const resizedBitmap = await createImageBitmap(img, {
-        resizeWidth: Math.round(width),
-        resizeHeight: Math.round(height),
-        resizeQuality: 'low'
-      });
-
-      img.close();
-
-      const canvas = document.createElement('canvas');
-      canvas.width = resizedBitmap.width;
-      canvas.height = resizedBitmap.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(resizedBitmap, 0, 0);
-      resizedBitmap.close();
-
-      return new Promise((resolve) => {
         canvas.toBlob((blob) => {
+          URL.revokeObjectURL(objectUrl);
+          img.src = "";
           canvas.width = 0;
           canvas.height = 0;
+
+          if (!blob) {
+            resolve(file); // Fallback to original
+            return;
+          }
           resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: 'image/webp', lastModified: Date.now() }));
         }, 'image/webp', 0.4);
-      });
-    } catch (e) {
-      console.warn('Compression failed, using original', e);
-      return file;
-    }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(file); // Fallback
+      };
+    });
   };
 
   const fetchChecklistItems = async () => {
@@ -476,10 +477,10 @@ const App = () => {
     }
   }
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-      {/* Cleaner Task View (Stand-alone Page Mode) */}
-      {(activeCleanerTask || loadingCleanerTask) && (
+  // Isolation for Cleaner View to save maximum memory on mobile devices
+  if (activeCleanerTask || loadingCleanerTask) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
         <div className="fixed inset-0 z-[100] bg-slate-50 overflow-y-auto">
           <div className="max-w-xl mx-auto min-h-screen bg-white shadow-2xl flex flex-col">
             {loadingCleanerTask ? (
@@ -580,7 +581,6 @@ const App = () => {
                                   if (!file) return;
                                   setLoading(true);
                                   try {
-                                    // Compress image before upload to avoid memory issues and save bandwidth
                                     const compressedFile = await compressImage(file);
                                     const fileExt = 'webp';
                                     const fileName = `${Math.random()}.${fileExt}`;
@@ -636,7 +636,12 @@ const App = () => {
             )}
           </div>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
 
       {/* Checklist Review Modal */}
       {reviewTask && (
