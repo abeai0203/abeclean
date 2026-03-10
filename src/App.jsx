@@ -129,50 +129,58 @@ const App = () => {
     }
   };
 
-  const compressImage = (file) => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
-      img.src = objectUrl;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800; // Lowered for Android stability
-        const MAX_HEIGHT = 800;
-        let width = img.width;
-        let height = img.height;
+  const compressImage = async (file) => {
+    try {
+      // Use modern createImageBitmap for super efficient decoding and resizing
+      const MAX_SIZE = 640;
+      let img = await createImageBitmap(file);
 
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
+      let width = img.width;
+      let height = img.height;
+      if (width > height) {
+        if (width > MAX_SIZE) {
+          height *= MAX_SIZE / width;
+          width = MAX_SIZE;
         }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
+      } else {
+        if (height > MAX_SIZE) {
+          width *= MAX_SIZE / height;
+          height = MAX_SIZE;
+        }
+      }
 
+      // Resize during the creation of the bitmap if supported, or just use canvas
+      const resizedBitmap = await createImageBitmap(img, {
+        resizeWidth: Math.round(width),
+        resizeHeight: Math.round(height),
+        resizeQuality: 'medium'
+      });
+
+      // Cleanup original bitmap immediately
+      img.close();
+
+      const canvas = document.createElement('canvas');
+      canvas.width = resizedBitmap.width;
+      canvas.height = resizedBitmap.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(resizedBitmap, 0, 0);
+
+      // Cleanup resized bitmap
+      resizedBitmap.close();
+
+      return new Promise((resolve) => {
         canvas.toBlob((blob) => {
-          // Explicit Cleanup
-          URL.revokeObjectURL(objectUrl);
-          img.src = "";
+          // Final cleanup
           canvas.width = 0;
           canvas.height = 0;
-
-          if (!blob) return reject(new Error('Canvas blank error'));
           resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: 'image/webp', lastModified: Date.now() }));
-        }, 'image/webp', 0.4); // Balanced quality for proof-of-work
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
-        reject(new Error('Image load failed'));
-      };
-    });
+        }, 'image/webp', 0.4);
+      });
+    } catch (e) {
+      console.warn('createImageBitmap failed, using legacy fallback', e);
+      // Even if everything fails, return the original file to not block the user
+      return file;
+    }
   };
 
   const fetchChecklistItems = async () => {
