@@ -183,47 +183,62 @@ const App = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (userId = session?.user?.id) => {
+    if (!userId) {
+      console.warn('fetchData: No userId provided');
+      return;
+    }
     setLoading(true);
     try {
       await Promise.all([
-        fetchProperties(),
-        fetchCleaners(),
-        fetchCleaningTasks(),
-        fetchChecklistItems()
+        fetchProperties(userId),
+        fetchCleaners(userId),
+        fetchCleaningTasks(userId),
+        fetchChecklistItems(userId)
       ]);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchProperties = async () => {
+  const fetchProperties = async (userId = session?.user?.id) => {
+    if (!userId) return;
+    console.log('Fetching properties for userId:', userId);
     const { data, error } = await supabase
       .from('properties')
       .select('*')
-      .eq('owner_id', session?.user?.id)
+      .eq('owner_id', userId)
       .order('priority', { ascending: false });
 
     if (error) console.error('Error fetching properties:', error);
-    else setProperties(data || []);
+    else {
+      console.log('Properties fetched:', data?.length || 0);
+      setProperties(data || []);
+    }
   };
 
-  const fetchCleaners = async () => {
+  const fetchCleaners = async (userId = session?.user?.id) => {
+    if (!userId) return;
+    console.log('Fetching cleaners for userId:', userId);
     const { data, error } = await supabase
       .from('cleaners')
       .select('*')
-      .eq('owner_id', session?.user?.id)
+      .eq('owner_id', userId)
       .order('name');
 
     if (error) console.error('Error fetching cleaners:', error);
-    else setCleaners(data || []);
+    else {
+      console.log('Cleaners fetched:', data?.length || 0);
+      setCleaners(data || []);
+    }
   };
 
-  const fetchCleaningTasks = async () => {
+  const fetchCleaningTasks = async (userId = session?.user?.id) => {
+    if (!userId) return;
     const { data, error } = await supabase
       .from('cleaning_tasks')
       .select('*, cleaners(name, avatar_url, phone), properties(name, area)')
-      .eq('owner_id', session?.user?.id);
+      .eq('owner_id', userId);
 
     if (error) console.error('Error fetching tasks:', error);
     else {
@@ -295,11 +310,12 @@ const App = () => {
     }
   };
 
-  const fetchChecklistItems = async () => {
+  const fetchChecklistItems = async (userId = session?.user?.id) => {
+    if (!userId) return;
     const { data, error } = await supabase
       .from('checklist_items')
       .select('*')
-      .eq('owner_id', session?.user?.id)
+      .eq('owner_id', userId)
       .order('category', { ascending: false });
 
     if (error || !data || data.length === 0) {
@@ -310,9 +326,8 @@ const App = () => {
         { category: 'Bilik', item_text: 'Tukar cadar & sarung bantal' },
         { category: 'Tandas', item_text: 'Cuci mangkuk tandas' }
       ];
-      setChecklistItems(defaults.map((d, i) => ({ ...d, id: 1000 + i }))); // Temp UI state
-      await supabase.from('checklist_items').insert(defaults.map(d => ({ ...d, owner_id: session?.user?.id })));
-      fetchChecklistItems();
+      await supabase.from('checklist_items').insert(defaults.map(d => ({ ...d, owner_id: userId })));
+      fetchChecklistItems(userId);
     } else {
       setChecklistItems(data);
     }
@@ -398,8 +413,8 @@ const App = () => {
       setIsAdminAuthenticated(!!freshSession);
 
       setShowOnboarding(false);
-      // fetchData() will be called by useEffect when session changes, but let's be safe
-      setTimeout(() => fetchData(), 500); 
+      // Fetch data immediately with the new ownerId to bypass stale session state
+      fetchData(ownerId);
       
     } catch (err) {
       console.error('Onboarding Error:', err);
