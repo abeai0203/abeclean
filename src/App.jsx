@@ -701,7 +701,7 @@ const App = () => {
                                 </button>
                                 {task.cleaners?.phone && (
                                   <a
-                                    href={`https://wasap.my/${task.cleaners.phone.replace(/\D/g, '')}/*TUGASAN BARU*%0A%0AUnit: ${booking.propertyName}%0ATarikh: ${new Date(task.checkout_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}%0AMasa Checkout: ${properties.find(p => String(p.id) === String(task.property_id))?.checkout_time || '-'}`}
+                                    href={`https://wa.me/${task.cleaners.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`*TUGASAN BARU*\n\nUnit: ${booking.propertyName}\nCheckout: ${properties.find(p => String(p.id) === String(task.property_id))?.checkout_time || '-'}`)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 hover:bg-emerald-500 hover:text-white hover:shadow-lg hover:shadow-emerald-200 transition-all active:scale-95"
@@ -790,7 +790,7 @@ const App = () => {
                                       <div className="flex items-center gap-2">
                                         {task?.cleaners?.phone && (
                                           <a
-                                            href={`https://wasap.my/${task.cleaners.phone.replace(/\D/g, '')}/*TUGASAN BARU*%0A%0AUnit: ${b.propertyName}%0ATarikh: ${new Date(task.checkout_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}%0AMasa Checkout: ${properties.find(p => String(p.id) === String(task.property_id))?.checkout_time || '-'}`}
+                                            href={`https://wa.me/${task.cleaners.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`*TUGASAN BARU*\n\nUnit: ${b.propertyName}\nCheckout: ${properties.find(p => String(p.id) === String(task.property_id))?.checkout_time || '-'}`)}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             onClick={(e) => e.stopPropagation()}
