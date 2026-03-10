@@ -101,7 +101,7 @@ const App = () => {
   const fetchCleaningTasks = async () => {
     const { data, error } = await supabase
       .from('cleaning_tasks')
-      .select('*, cleaners(name, avatar_url)');
+      .select('*, cleaners(name, avatar_url, phone)');
 
     if (error) console.error('Error fetching tasks:', error);
     else setCleaningTasks(data || []);
