@@ -227,13 +227,16 @@ const App = () => {
       .order('category', { ascending: false });
 
     if (error || !data || data.length === 0) {
-      console.warn('Using fallback checklist items');
-      setChecklistItems([
-        { id: 101, category: 'Ruang Tamu', item_text: 'Vakum/Mop lantai' },
-        { id: 102, category: 'Ruang Tamu', item_text: 'Lap meja & kabinet' },
-        { id: 103, category: 'Bilik', item_text: 'Tukar cadar & sarung bantal' },
-        { id: 104, category: 'Tandas', item_text: 'Cuci mangkuk tandas' }
-      ]);
+      console.warn('Seeding default checklist items...');
+      const defaults = [
+        { category: 'Ruang Tamu', item_text: 'Vakum/Mop lantai' },
+        { category: 'Ruang Tamu', item_text: 'Lap meja & kabinet' },
+        { category: 'Bilik', item_text: 'Tukar cadar & sarung bantal' },
+        { category: 'Tandas', item_text: 'Cuci mangkuk tandas' }
+      ];
+      setChecklistItems(defaults.map((d, i) => ({ ...d, id: 1000 + i }))); // Temp UI state
+      await supabase.from('checklist_items').insert(defaults);
+      fetchChecklistItems();
     } else {
       setChecklistItems(data);
     }
@@ -783,7 +786,31 @@ const App = () => {
             <header className="p-8 border-b border-slate-50 flex items-center justify-between">
               <div>
                 <h3 className="text-2xl font-black text-slate-900 tracking-tight">Checklist Settings</h3>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Manage task categories & items</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Manage task categories & items</p>
+                  <button 
+                    onClick={async () => {
+                      const defaults = [
+                        { category: 'Ruang Tamu', item_text: 'Vakum/Mop lantai' },
+                        { category: 'Ruang Tamu', item_text: 'Lap meja & kabinet' },
+                        { category: 'Bilik', item_text: 'Tukar cadar & sarung bantal' },
+                        { category: 'Tandas', item_text: 'Cuci mangkuk tandas' }
+                      ];
+                      // Only insert items that don't exist yet to avoid clutter
+                      const existingTexts = new Set(checklistItems.map(i => i.item_text.toLowerCase()));
+                      const toAdd = defaults.filter(d => !existingTexts.has(d.item_text.toLowerCase()));
+                      if (toAdd.length > 0) {
+                        await supabase.from('checklist_items').insert(toAdd);
+                        fetchChecklistItems();
+                      } else {
+                        alert('Semua item default sudah ada dalam senarai.');
+                      }
+                    }}
+                    className="text-[10px] font-black text-airbnb uppercase tracking-widest bg-pink-50 px-2 py-1 rounded-md hover:bg-airbnb hover:text-white transition-all shadow-sm"
+                  >
+                    Muatkan Default
+                  </button>
+                </div>
               </div>
               <button onClick={() => setShowChecklistSettings(false)} className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
                 <Plus size={24} className="rotate-45" />
