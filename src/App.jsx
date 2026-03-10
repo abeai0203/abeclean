@@ -9,9 +9,10 @@ const App = () => {
   const [properties, setProperties] = useState([]);
   const [cleaners, setCleaners] = useState([]);
   const [cleaningTasks, setCleaningTasks] = useState([]);
-  const [currentUserRole, setCurrentUserRole] = useState('admin');
+  const [currentUserRole, setCurrentUserRole] = useState(localStorage.getItem('ops_admin_access') === 'true' ? 'admin' : 'admin');
   const [currentCleanerId, setCurrentCleanerId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(localStorage.getItem('ops_admin_access') === 'true');
 
   // Modals state
   const [showNewTaskModal, setShowNewTaskModal] = useState(false);
@@ -95,9 +96,21 @@ const App = () => {
       localStorage.setItem(`task_${activeCleanerTask.id}`, JSON.stringify(dataToSave));
     }
   }, [activeCleanerTask?.checklist_responses, activeCleanerTask?.proof_images]);
-  // Check for task_id in URL for cleaner mode
+  // Check for task_id (cleaner) or admin_bypass in URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    
+    // 1. Special Admin Bypass
+    // Use ?pass=boss to activate special access once
+    if (params.get('pass') === 'boss') {
+      localStorage.setItem('ops_admin_access', 'true');
+      setIsAdminAuthenticated(true);
+      setCurrentUserRole('admin');
+      // Clean the URL without refresh
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // 2. Cleaner Task Link
     const taskId = params.get('task_id');
     if (taskId) {
       setLoadingCleanerTask(true);
