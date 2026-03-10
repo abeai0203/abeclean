@@ -1605,6 +1605,9 @@ const App = () => {
                   const unpaidBalance = unpaidTasks.reduce((sum, t) => sum + parseFloat(t.properties?.cleaning_fee || 45), 0);
                   const totalPaid = paidTasks.reduce((sum, t) => sum + parseFloat(t.properties?.cleaning_fee || 45), 0);
 
+                  const allCompletedTasks = cleaningTasks.filter(t => t.cleaner_id === cleaner.id && t.status === 'completed');
+                  const lifetimeEarnings = allCompletedTasks.reduce((sum, t) => sum + parseFloat(t.properties?.cleaning_fee || 45), 0);
+
                   return (
                     <div key={cleaner.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all relative overflow-hidden group">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-[5rem] -mr-12 -mt-12 transition-all group-hover:scale-110 group-hover:bg-emerald-100/50"></div>
@@ -1634,6 +1637,11 @@ const App = () => {
                         <div className="flex justify-between items-center px-2">
                           <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Jobs ({['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][selectedMonth]})</span>
                           <span className="text-sm font-black text-slate-700">{tasks.length} Units</span>
+                        </div>
+
+                        <div className="px-4 py-3 bg-slate-900/5 rounded-2xl border border-slate-900/5 flex justify-between items-center">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lifetime Earnings</span>
+                          <span className="text-sm font-black text-slate-900">RM {lifetimeEarnings.toFixed(0)}</span>
                         </div>
 
                         <button 
@@ -1807,6 +1815,9 @@ const App = () => {
                 const unpaid = tasks.filter(t => !t.paid_at);
                 const paid = tasks.filter(t => !!t.paid_at);
                 const unpaidSum = unpaid.reduce((sum, t) => sum + parseFloat(t.properties?.cleaning_fee || 45), 0);
+                
+                const allCompleted = cleaningTasks.filter(t => t.cleaner_id === paymentDetailCleaner.id && t.status === 'completed');
+                const lifetime = allCompleted.reduce((sum, t) => sum + parseFloat(t.properties?.cleaning_fee || 45), 0);
 
                 return (
                   <>
@@ -1824,8 +1835,8 @@ const App = () => {
                         )}
                       </div>
                       <div className="p-6 bg-emerald-50 rounded-3xl border border-emerald-100 flex flex-col justify-center">
-                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Jobs Count</p>
-                        <p className="text-3xl font-black text-emerald-600">{tasks.length} <span className="text-sm">Units</span></p>
+                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Lifetime Earnings</p>
+                        <p className="text-3xl font-black text-emerald-600">RM {lifetime.toFixed(0)}</p>
                       </div>
                     </div>
                     {tasks.length === 0 ? (
