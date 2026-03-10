@@ -306,6 +306,7 @@ const App = () => {
   };
 
   const handleOnboardingComplete = async () => {
+    if (loading) return;
     setLoading(true);
     try {
       // 1. Register User in Supabase
@@ -321,25 +322,31 @@ const App = () => {
       });
 
       if (authError) throw authError;
-      if (!authData.user) throw new Error('Registration failed');
+      if (!authData.user) throw new Error('Registration failed. Please try again.');
 
       const ownerId = authData.user.id;
+      console.log('User registered with ID:', ownerId);
 
       // 2. Create Property
       const { data: propData, error: propError } = await supabase
         .from('properties')
         .insert([{
-          name: onboardingData.propertyName,
-          area: onboardingData.location,
-          cleaning_fee: onboardingData.cleaningFee,
-          ical_url: onboardingData.icalUrl,
+          name: onboardingData.propertyName || 'My First Home',
+          area: onboardingData.location || 'Shah Alam',
+          cleaning_fee: onboardingData.cleaningFee || 45,
+          ical_url: onboardingData.icalUrl || '',
           status: 'Ready',
           priority: 'Normal',
           owner_id: ownerId
         }])
         .select();
 
-      if (propError) throw propError;
+      if (propError) {
+        console.error('Property creation error:', propError);
+        throw new Error('Gagal simpan maklumat homestay: ' + propError.message);
+      }
+
+      console.log('Property created:', propData);
 
       // 3. Create Cleaner if name provided
       if (onboardingData.cleanerName) {
@@ -351,13 +358,26 @@ const App = () => {
             role: 'cleaner',
             owner_id: ownerId
           }]);
-        if (cleanerError) throw cleanerError;
+        if (cleanerError) {
+          console.error('Cleaner creation error:', cleanerError);
+        }
       }
 
+      // 4. Force a small delay to ensure Supabase Auth session is propagated
+      await new Promise(r => setTimeout(r, 1000));
+      
+      // 5. Explicitly fetch session to be safe
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      setSession(freshSession);
+      setIsAdminAuthenticated(!!freshSession);
+
       setShowOnboarding(false);
-      fetchData();
+      // fetchData() will be called by useEffect when session changes, but let's be safe
+      setTimeout(() => fetchData(), 500); 
+      
     } catch (err) {
-      alert('Error: ' + err.message);
+      console.error('Onboarding Error:', err);
+      alert('Maaf boss, ada masalah teknikal: ' + err.message);
     } finally {
       setLoading(false);
     }
