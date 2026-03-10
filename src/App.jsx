@@ -472,7 +472,35 @@ const App = () => {
     }
   }
 
-  async function syncAirbnb(unit) {
+  const handleImageUpload = async (file) => {
+    if (!file || !activeCleanerTask) return;
+
+    // Non-blocking UI update (don't use setLoading which re-renders everything immediately)
+    // Just show a simple native alert if it starts taking too long
+    try {
+      const compressedFile = await compressImage(file);
+      const fileExt = compressedFile.type.split('/')[1] || 'jpg';
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `proofs/${activeCleanerTask.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, compressedFile);
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+
+      setActiveCleanerTask(prev => {
+        const newImgs = [...(prev.proof_images || []), publicUrl];
+        return { ...prev, proof_images: newImgs };
+      });
+    } catch (err) {
+      console.error('Upload failed:', err);
+      alert('Gagal hantar gambar. Sila pastikan internet okey dan cuba lagi.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const syncAirbnb = async (unit) => {
     if (!unit.ical_url) {
       alert('Please add an Airbnb iCal link first.');
       return;
@@ -621,33 +649,13 @@ const App = () => {
                               <span className="text-[10px] font-black uppercase mt-2">Ambil Gambar</span>
                               <input
                                 type="file"
-                                accept="image/*;capture=camera"
+                                accept="image/*"
                                 capture="environment"
                                 className="hidden"
-                                onChange={async (e) => {
+                                onChange={(e) => {
                                   const file = e.target.files?.[0];
-                                  if (!file) return;
-
-                                  // Minimal logic here to avoid crash during handoff
-                                  setLoading(true);
-                                  try {
-                                    const compressedFile = await compressImage(file);
-                                    const fileExt = compressedFile.type.split('/')[1] || 'jpg';
-                                    const fileName = `${Math.random()}.${fileExt}`;
-                                    const filePath = `proofs/${activeCleanerTask.id}/${fileName}`;
-                                    const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, compressedFile);
-                                    if (uploadError) throw uploadError;
-                                    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
-
-                                    setActiveCleanerTask(prev => ({
-                                      ...prev,
-                                      proof_images: [...(prev.proof_images || []), publicUrl]
-                                    }));
-                                    e.target.value = '';
-                                  } catch (err) {
-                                    console.error('Upload error:', err);
-                                    alert('Gagal hantar gambar. Sila cuba lagi.');
-                                  } finally { setLoading(false); }
+                                  if (file) handleImageUpload(file);
+                                  e.target.value = '';
                                 }}
                               />
                             </label>
