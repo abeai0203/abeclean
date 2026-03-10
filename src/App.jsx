@@ -1013,12 +1013,21 @@ const App = () => {
         <div className="max-w-7xl mx-auto w-full p-4 md:p-8">
           {view === 'dashboard' && (
             <>
-              <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-                <div className="flex items-center gap-4">
+              <header className="mb-12">
+                <div className="flex items-center gap-4 mb-10">
                   <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-slate-600 hover:bg-white rounded-lg"><Menu size={24} /></button>
-                  <h2 className="text-3xl font-black text-slate-900 tracking-tight">Dashboard</h2>
+                  <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">Dashboard</h2>
                 </div>
-                <div className="flex flex-wrap items-center gap-6 w-full md:w-auto">
+
+                <div className="flex flex-col lg:flex-row lg:items-center gap-6 w-full">
+                  <button 
+                    onClick={() => setShowNewTaskModal(true)} 
+                    className="w-full lg:w-auto bg-airbnb text-white px-10 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-airbnb/20 transition-all hover:scale-105 active:scale-95 leading-none shrink-0"
+                  >
+                    <Plus size={20} strokeWidth={3} /> Add Unit
+                  </button>
+
+                  <div className="flex-1 min-w-0">
                   {/* Stats Section */}
                   <div className="w-full md:w-auto">
                   {(() => {
@@ -1092,15 +1101,16 @@ const App = () => {
                     );
                   })()}
                 </div>
+              </div>
 
-                  <div className="relative">
+              <div className="relative shrink-0">
                     <button
                       onClick={() => setShowNotifications(!showNotifications)}
-                      className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${notifications.length > 0 ? 'bg-amber-50 text-amber-500 animate-pulse' : 'bg-white border border-slate-100 text-slate-400'}`}
+                      className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${notifications.length > 0 ? 'bg-amber-50 text-amber-500 animate-pulse' : 'bg-white border border-slate-100 text-slate-400'}`}
                     >
-                      <Bell size={20} />
+                      <Bell size={24} />
                       {notifications.length > 0 && (
-                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">
+                        <span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">
                           {notifications.length}
                         </span>
                       )}
@@ -1141,10 +1151,6 @@ const App = () => {
                       </div>
                     )}
                   </div>
-
-                  <button onClick={() => setShowNewTaskModal(true)} className="w-full md:w-auto bg-airbnb text-white px-8 py-4 rounded-3xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-airbnb/20 transition-all hover:scale-105 active:scale-95 leading-none">
-                    <Plus size={20} strokeWidth={3} /> Add Unit
-                  </button>
                 </div>
               </header>
 
