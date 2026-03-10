@@ -207,6 +207,10 @@ const App = () => {
       const checkoutDate = end.toISOString().split('T')[0];
       const propertyId = selectedBooking.propertyId;
 
+      if (!propertyId || !cleanerId) {
+        throw new Error(`Technical Error: Missing ${!propertyId ? 'Property ID' : 'Cleaner ID'}. Please refresh and try again.`);
+      }
+
       console.log('Assigning/Updating task:', { propertyId, checkoutDate, cleanerId });
 
       // Check if task already exists for this property and date
@@ -497,7 +501,7 @@ const App = () => {
 
                           <div
                             className={`flex items-center gap-4 text-slate-500 cursor-pointer p-2 -m-2 rounded-2xl transition-all hover:bg-slate-50 ${!task ? 'animate-pulse' : ''}`}
-                            onClick={() => openAssignModal(nextBooking)}
+                            onClick={() => nextBooking && openAssignModal({ ...nextBooking, propertyId: property.id })}
                           >
                             <div className="w-10 h-10 rounded-2xl bg-pink-50 flex items-center justify-center text-airbnb group-hover:scale-110 transition-transform">
                               <User size={20} />
