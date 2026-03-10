@@ -130,9 +130,11 @@ const App = () => {
   };
 
   const compressImage = async (file) => {
+    // Wait for browser to recover after camera app closes
+    await new Promise(r => setTimeout(r, 500));
+
     try {
-      // Use modern createImageBitmap for super efficient decoding and resizing
-      const MAX_SIZE = 640;
+      const MAX_SIZE = 480; // Ultra low for extreme stability
       let img = await createImageBitmap(file);
 
       let width = img.width;
@@ -149,14 +151,12 @@ const App = () => {
         }
       }
 
-      // Resize during the creation of the bitmap if supported, or just use canvas
       const resizedBitmap = await createImageBitmap(img, {
         resizeWidth: Math.round(width),
         resizeHeight: Math.round(height),
-        resizeQuality: 'medium'
+        resizeQuality: 'low'
       });
 
-      // Cleanup original bitmap immediately
       img.close();
 
       const canvas = document.createElement('canvas');
@@ -164,21 +164,17 @@ const App = () => {
       canvas.height = resizedBitmap.height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(resizedBitmap, 0, 0);
-
-      // Cleanup resized bitmap
       resizedBitmap.close();
 
       return new Promise((resolve) => {
         canvas.toBlob((blob) => {
-          // Final cleanup
           canvas.width = 0;
           canvas.height = 0;
           resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: 'image/webp', lastModified: Date.now() }));
         }, 'image/webp', 0.4);
       });
     } catch (e) {
-      console.warn('createImageBitmap failed, using legacy fallback', e);
-      // Even if everything fails, return the original file to not block the user
+      console.warn('Compression failed, using original', e);
       return file;
     }
   };
@@ -577,7 +573,6 @@ const App = () => {
                               <input
                                 type="file"
                                 accept="image/*"
-                                capture="environment"
                                 className="hidden"
                                 onChange={async (e) => {
                                   const file = e.target.files[0];
