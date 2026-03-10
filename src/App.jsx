@@ -13,6 +13,17 @@ const App = () => {
   const [currentCleanerId, setCurrentCleanerId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(localStorage.getItem('ops_admin_access') === 'true');
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(1);
+  const [onboardingData, setOnboardingData] = useState({
+    businessName: '',
+    location: 'Shah Alam',
+    propertyName: '',
+    cleaningFee: 45,
+    icalUrl: '',
+    cleanerName: '',
+    cleanerPhone: ''
+  });
 
   // Modals state
   const [showNewTaskModal, setShowNewTaskModal] = useState(false);
@@ -115,8 +126,11 @@ const App = () => {
     if (taskId) {
       setLoadingCleanerTask(true);
       loadCleanerTask(taskId).finally(() => setLoadingCleanerTask(false));
+    } else if (!isAdminAuthenticated) {
+      // If not admin and not cleaner link, show onboarding/login
+      setShowOnboarding(true);
     }
-  }, []);
+  }, [isAdminAuthenticated]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -257,6 +271,246 @@ const App = () => {
     } else {
       setChecklistItems(data);
     }
+  };
+
+  const handleOnboardingComplete = async () => {
+    setLoading(true);
+    try {
+      // 1. Create Property
+      const { data: propData, error: propError } = await supabase
+        .from('properties')
+        .insert([{
+          name: onboardingData.propertyName,
+          area: onboardingData.location,
+          cleaning_fee: onboardingData.cleaningFee,
+          ical_url: onboardingData.icalUrl,
+          status: 'Ready',
+          priority: 'Normal'
+        }])
+        .select();
+
+      if (propError) throw propError;
+
+      // 2. Create Cleaner if name provided
+      if (onboardingData.cleanerName) {
+        const { error: cleanerError } = await supabase
+          .from('cleaners')
+          .insert([{
+            name: onboardingData.cleanerName,
+            phone: onboardingData.cleanerPhone,
+            role: 'cleaner'
+          }]);
+        if (cleanerError) throw cleanerError;
+      }
+
+      // 3. Set local auth to keep user in
+      localStorage.setItem('ops_admin_access', 'true');
+      setIsAdminAuthenticated(true);
+      setShowOnboarding(false);
+      fetchData();
+    } catch (err) {
+      alert('Error during setup: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const OnboardingView = () => {
+    const totalSteps = 4;
+    const progress = (onboardingStep / totalSteps) * 100;
+
+    return (
+      <div className="fixed inset-0 bg-white z-[200] flex flex-col font-sans overflow-hidden text-slate-900">
+        {/* Progress Bar */}
+        <div className="h-1.5 w-full bg-slate-100 relative">
+          <div 
+            className="h-full bg-airbnb transition-all duration-700 ease-out shadow-[0_0_10px_rgba(255,56,92,0.5)]" 
+            style={{ width: `${progress}%` }}
+          ></div>
+        </div>
+
+        <div className="flex-1 flex flex-col md:flex-row h-full overflow-hidden">
+          {/* Left Content */}
+          <div className="flex-1 p-8 md:p-20 flex flex-col justify-center max-w-2xl mx-auto w-full">
+            <div className="flex items-center gap-3 mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <Sparkles className="w-10 h-10 text-airbnb" />
+              <h1 className="text-2xl font-black tracking-tight">OPS AIRBNB</h1>
+            </div>
+
+            {onboardingStep === 1 && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 text-slate-900">
+                <h2 className="text-5xl md:text-6xl font-black text-slate-900 leading-[1.1]">Selamat Datang ke OPS AIRBNB.</h2>
+                <p className="text-xl text-slate-500 font-medium font-sans">Jom setup bisnes homestay boss dulu. Nama apa eh bisnes ni?</p>
+                <div className="space-y-4">
+                  <div className="relative">
+                    <input 
+                      autoFocus
+                      type="text" 
+                      placeholder="Contoh: Abah Homestay Group"
+                      className="w-full text-2xl font-black p-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb focus:ring-4 focus:ring-airbnb/5 outline-none transition-all placeholder:text-slate-200"
+                      value={onboardingData.businessName}
+                      onChange={e => setOnboardingData({...onboardingData, businessName: e.target.value})}
+                    />
+                  </div>
+                  <select 
+                    className="w-full text-lg font-bold p-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb outline-none bg-slate-50"
+                    value={onboardingData.location}
+                    onChange={e => setOnboardingData({...onboardingData, location: e.target.value})}
+                  >
+                    <option>Shah Alam</option>
+                    <option>Puchong</option>
+                    <option>Kuala Lumpur</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {onboardingStep === 2 && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                <h2 className="text-5xl md:text-6xl font-black text-slate-900 leading-[1.1]">Homestay pertama boss?</h2>
+                <p className="text-xl text-slate-500 font-medium">Jangan risau, kita add satu dulu untuk try tengok.</p>
+                <div className="space-y-4">
+                  <input 
+                    autoFocus
+                    type="text" 
+                    placeholder="Nama Unit (e.g. Arte Subang West)"
+                    className="w-full text-lg font-black p-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb focus:ring-4 focus:ring-airbnb/5 outline-none transition-all"
+                    value={onboardingData.propertyName}
+                    onChange={e => setOnboardingData({...onboardingData, propertyName: e.target.value})}
+                  />
+                  <div className="flex items-center gap-4 bg-slate-50 p-6 rounded-3xl border-2 border-slate-100">
+                    <span className="font-black text-slate-400">RM</span>
+                    <input 
+                      type="number" 
+                      placeholder="Upah Cuci"
+                      className="w-full text-lg font-black bg-transparent outline-none"
+                      value={onboardingData.cleaningFee}
+                      onChange={e => setOnboardingData({...onboardingData, cleaningFee: e.target.value})}
+                    />
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="Link iCal Airbnb (Optional)"
+                    className="w-full text-lg font-medium p-6 rounded-3xl border-2 border-slate-50 bg-slate-50/50 outline-none focus:border-airbnb transition-all"
+                    value={onboardingData.icalUrl}
+                    onChange={e => setOnboardingData({...onboardingData, icalUrl: e.target.value})}
+                  />
+                </div>
+              </div>
+            )}
+
+            {onboardingStep === 3 && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                <h2 className="text-5xl md:text-6xl font-black text-slate-900 leading-[1.1]">Sapa yang tukang cuci?</h2>
+                <p className="text-xl text-slate-500 font-medium">Add cleaner boss kat sini. Nanti kita boleh hantar link tugasan kat WhatsApp dorang.</p>
+                <div className="space-y-4">
+                  <input 
+                    autoFocus
+                    type="text" 
+                    placeholder="Nama Cleaner"
+                    className="w-full text-lg font-black p-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb focus:ring-4 focus:ring-airbnb/5 outline-none transition-all text-slate-800"
+                    value={onboardingData.cleanerName}
+                    onChange={e => setOnboardingData({...onboardingData, cleanerName: e.target.value})}
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="No Phone (e.g. 6012...)"
+                    className="w-full text-lg font-black p-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb outline-none transition-all text-slate-800"
+                    value={onboardingData.cleanerPhone}
+                    onChange={e => setOnboardingData({...onboardingData, cleanerPhone: e.target.value})}
+                  />
+                </div>
+              </div>
+            )}
+
+            {onboardingStep === 4 && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                <div className="w-24 h-24 bg-emerald-50 rounded-[2.5rem] flex items-center justify-center text-emerald-500 mb-4 animate-bounce">
+                  <CheckCircle size={48} strokeWidth={3} />
+                </div>
+                <h2 className="text-5xl md:text-6xl font-black text-slate-900 leading-[1.1]">Semua Ready Boss!</h2>
+                <p className="text-xl text-slate-500 font-medium">Banyak lagi magic boss boleh buat bila dah masuk dashboard nanti. Jom!</p>
+                
+                <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 space-y-4">
+                  <div className="flex justify-between">
+                    <span className="font-bold text-slate-400 uppercase text-xs">Bisnes</span>
+                    <span className="font-black text-slate-900">{onboardingData.businessName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-bold text-slate-400 uppercase text-xs">Unit</span>
+                    <span className="font-black text-slate-900">{onboardingData.propertyName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-bold text-slate-400 uppercase text-xs">Cleaner</span>
+                    <span className="font-black text-slate-900">{onboardingData.cleanerName || '-'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Visual (Hidden on mobile) */}
+          <div className="hidden md:flex flex-1 bg-slate-50 items-center justify-center p-20 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-airbnb/5 to-transparent"></div>
+            <div className="relative z-10 w-full max-w-lg aspect-square bg-white rounded-[4rem] shadow-2xl border border-slate-100 flex items-center justify-center p-12 overflow-hidden group">
+               <div className="absolute top-0 right-0 w-64 h-64 bg-airbnb/5 rounded-bl-[10rem] group-hover:scale-110 transition-transform duration-1000"></div>
+               <div className="relative text-center">
+                  <div className="w-20 h-20 bg-airbnb text-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-airbnb/30">
+                    {onboardingStep === 1 && <Sparkles size={40} />}
+                    {onboardingStep === 2 && <Home size={40} />}
+                    {onboardingStep === 3 && <Users size={40} />}
+                    {onboardingStep === 4 && <ShieldCheck size={40} />}
+                  </div>
+                  <h3 className="text-3xl font-black text-slate-900 mb-4">
+                    {onboardingStep === 1 && "The Beginning."}
+                    {onboardingStep === 2 && "Setup is Key."}
+                    {onboardingStep === 3 && "Build your Team."}
+                    {onboardingStep === 4 && "Great Start!"}
+                  </h3>
+                  <div className="flex justify-center gap-1">
+                    {[1,2,3,4].map(s => (
+                      <div key={s} className={`h-1 rounded-full transition-all duration-500 ${s <= onboardingStep ? 'w-8 bg-airbnb' : 'w-2 bg-slate-100'}`}></div>
+                    ))}
+                  </div>
+               </div>
+            </div>
+            
+            {/* Background elements */}
+            <div className="absolute top-20 -right-20 w-80 h-80 bg-airbnb/5 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-20 -left-20 w-80 h-80 bg-sky-50 rounded-full blur-3xl"></div>
+          </div>
+        </div>
+
+        {/* Footer Navigation */}
+        <footer className="p-8 md:px-20 border-t border-slate-50 flex items-center justify-between bg-white/80 backdrop-blur-md">
+          <button 
+            onClick={() => onboardingStep > 1 && setOnboardingStep(onboardingStep - 1)}
+            onDoubleClick={(e) => {
+              // Master secret: double click back on first step to force bypass
+              if (onboardingStep === 1) {
+                localStorage.setItem('ops_admin_access', 'true');
+                setIsAdminAuthenticated(true);
+                setShowOnboarding(false);
+              }
+            }}
+            className={`text-slate-900 font-bold underline transition-opacity ${onboardingStep === 1 ? 'opacity-30' : 'opacity-100'}`}
+          >
+            Back
+          </button>
+          
+          <button 
+            onClick={() => {
+              if (onboardingStep === 4) handleOnboardingComplete();
+              else setOnboardingStep(onboardingStep + 1);
+            }}
+            disabled={onboardingStep === 1 && !onboardingData.businessName}
+            className={`px-12 py-5 rounded-2xl font-black text-sm uppercase tracking-widest text-white shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-30 disabled:scale-100 ${onboardingStep === 4 ? 'bg-emerald-500 shadow-emerald-200' : 'bg-airbnb shadow-airbnb/20'}`}
+          >
+            {onboardingStep === totalSteps ? 'Complete Setup' : 'Next Step'}
+          </button>
+        </footer>
+      </div>
+    );
   };
 
   const loadCleanerTask = async (taskId) => {
@@ -768,6 +1022,10 @@ const App = () => {
         </div>
       </div>
     );
+  }
+
+  if (showOnboarding && !isAdminAuthenticated) {
+    return <OnboardingView />;
   }
 
   return (
