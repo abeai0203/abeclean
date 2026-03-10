@@ -1163,13 +1163,43 @@ const App = () => {
                       .filter(b => new Date(b.end) >= new Date())
                       .sort((a, b) => new Date(a.end) - new Date(b.end))[0];
 
-                    const task = nextBooking ? cleaningTasks.find(t =>
-                      String(t.property_id) === String(property.id) &&
-                      t.checkout_date === new Date(nextBooking.end).toISOString().split('T')[0]
-                    ) : null;
+                    const isHighPriority = property.priority === 'High';
+                    const checkoutTimeStr = (property.checkout_time || '12:00 PM').split('(')[0].trim();
+                    
+                    // Logic for Alert & Progress
+                    let showAlert = false;
+                    let progressPercent = 0;
+                    
+                    if (nextBooking) {
+                      const checkoutDate = new Date(nextBooking.end);
+                      // Parse checkout time (e.g., "12:00 PM")
+                      const [time, modifier] = checkoutTimeStr.split(' ');
+                      let [hours, minutes] = time.split(':');
+                      if (hours === '12') hours = '00';
+                      if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+                      checkoutDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+                      
+                      const now = new Date();
+                      const diffMs = now - checkoutDate;
+                      const diffHours = diffMs / (1000 * 60 * 60);
+                      
+                      // Show alert if High Priority and not completed/assigned 1 hour after checkout
+                      if (isHighPriority && diffHours >= 1 && (!task || task.status !== 'completed')) {
+                        showAlert = true;
+                      }
+                      
+                      // Progress bar logic (within 4 hours of checkout)
+                      const totalWindowMs = 4 * 60 * 60 * 1000; // 4 hours window
+                      if (diffMs > 0 && diffMs < totalWindowMs) {
+                        progressPercent = Math.min((diffMs / totalWindowMs) * 100, 100);
+                      }
+                    }
 
                     return (
-                      <div key={property.id} className="group bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/30 p-8 flex flex-col h-full transition-all duration-500 hover:shadow-2xl hover:-translate-y-1">
+                      <div key={property.id} className={`group bg-white rounded-[2.5rem] border ${showAlert ? 'border-rose-300 shadow-[0_0_25px_rgba(244,63,94,0.3)] animate-[pulse_2s_infinite]' : 'border-slate-100 shadow-xl shadow-slate-200/30'} p-8 flex flex-col h-full transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 relative overflow-hidden`}>
+                        {showAlert && (
+                          <div className="absolute top-0 left-0 w-full h-1 bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)] z-10"></div>
+                        )}
                         {/* Top Tags */}
                         <div className="flex justify-between items-center mb-8">
                           <span className="px-4 py-1.5 bg-sky-50 text-sky-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-sky-100">{property.area}</span>
@@ -1191,9 +1221,17 @@ const App = () => {
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Next Checkout</p>
                               <p className="text-sm font-black text-slate-700">
                                 {nextBooking
-                                  ? `${new Date(nextBooking.end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} (${(property.checkout_time || '12:00 PM').split('(')[0].trim()})`
+                                  ? `${new Date(nextBooking.end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} (${checkoutTimeStr})`
                                   : 'No upcoming checkout'}
                               </p>
+                              {progressPercent > 0 && (
+                                <div className="mt-2 w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full transition-all duration-1000 ${progressPercent > 75 ? 'bg-rose-500' : progressPercent > 50 ? 'bg-amber-500' : 'bg-airbnb'}`}
+                                    style={{ width: `${progressPercent}%` }}
+                                  ></div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1551,49 +1589,67 @@ const App = () => {
                 {cleaningTasks
                   .filter(t => t.status === 'completed')
                   .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
-                  .map(task => (
-                    <div key={task.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 overflow-hidden relative group">
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-bl-[4rem] -mr-8 -mt-8 transition-all group-hover:scale-110 group-hover:bg-pink-50/50"></div>
-                      <div className="flex items-center gap-5 relative">
-                        <div className="w-16 h-16 rounded-3xl bg-slate-900 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center text-white">
-                          <CheckCircle size={32} className="text-emerald-400" />
+                  .map(task => {
+                    const completedDate = new Date(task.completed_at);
+                    const day = completedDate.getDate();
+                    const month = completedDate.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase();
+                    
+                    return (
+                      <div key={task.id} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:-translate-y-1 transition-all flex flex-col md:flex-row md:items-center gap-8 overflow-hidden relative group">
+                        {/* Status Glow Background */}
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-[5rem] -mr-12 -mt-12 transition-all group-hover:scale-110 group-hover:bg-emerald-100/50"></div>
+                        
+                        {/* Date Bubble (Consistent with Dashboard) */}
+                        <div className="flex flex-col items-center justify-center w-20 h-20 bg-slate-50 rounded-[2rem] border border-slate-100 shrink-0 group-hover:bg-white transition-colors relative">
+                          <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">{month}</span>
+                          <span className="text-2xl font-black text-slate-400 group-hover:text-slate-900 transition-colors leading-none">{day}</span>
                         </div>
-                        <div>
-                          <h4 className="font-black text-slate-900 text-lg leading-tight">{task.properties?.name}</h4>
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">{task.properties?.area}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden border border-white shadow-sm">
-                              {task.cleaners?.avatar_url ? <img src={task.cleaners.avatar_url} className="w-full h-full object-cover" /> : <User size={12} />}
+
+                        {/* Task Details */}
+                        <div className="flex-1 min-w-0 relative">
+                          <div className="flex flex-wrap items-center gap-3 mb-2">
+                            <h4 className="font-black text-slate-900 text-2xl tracking-tight leading-tight">{task.properties?.name}</h4>
+                            <span className="px-3 py-1 bg-sky-50 text-sky-500 rounded-full text-[9px] font-black uppercase tracking-widest border border-sky-100">{task.properties?.area}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-3 mt-4">
+                            <div className="w-8 h-8 rounded-full bg-slate-900 border-2 border-white shadow-md overflow-hidden flex items-center justify-center text-white shrink-0">
+                              {task.cleaners?.avatar_url ? <img src={task.cleaners.avatar_url} className="w-full h-full object-cover" /> : <User size={14} />}
                             </div>
-                            <span className="text-xs font-black text-slate-600">{task.cleaners?.name}</span>
+                            <div>
+                              <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Assigned To</p>
+                              <p className="text-xs font-black text-slate-700">{task.cleaners?.name}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Completion Time & Actions */}
+                        <div className="flex flex-col md:flex-row md:items-center gap-8 relative">
+                          <div className="text-left md:text-right">
+                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Selesai Pada</p>
+                            <p className="text-sm font-black text-slate-700">{completedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                            <p className="text-[10px] font-bold text-slate-400">{completedDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
+                          
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => handleResetTask(task.id)}
+                              className="w-14 h-14 flex items-center justify-center bg-slate-50 text-slate-400 rounded-2xl hover:text-rose-500 hover:bg-rose-50 hover:scale-110 active:scale-95 transition-all shadow-sm"
+                              title="Reset Tugasan"
+                            >
+                              <RotateCcw size={20} />
+                            </button>
+                            <button
+                              onClick={() => setReviewTask(task)}
+                              className="px-8 h-14 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-slate-900/20 whitespace-nowrap"
+                            >
+                              Lihat Report
+                            </button>
                           </div>
                         </div>
                       </div>
-
-                      <div className="flex flex-col md:flex-row md:items-center gap-6 relative">
-                        <div className="text-left md:text-right">
-                          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Completed At</p>
-                          <p className="text-sm font-black text-slate-700">{new Date(task.completed_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                          <p className="text-[10px] font-bold text-slate-400">{new Date(task.completed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => handleResetTask(task.id)}
-                            className="w-12 h-12 flex items-center justify-center bg-slate-50 text-slate-400 rounded-2xl hover:text-rose-500 hover:bg-rose-50 transition-all"
-                            title="Reset Tugasan"
-                          >
-                            <RotateCcw size={18} />
-                          </button>
-                          <button
-                            onClick={() => setReviewTask(task)}
-                            className="px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-slate-900/10"
-                          >
-                            Lihat Report
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 {cleaningTasks.filter(t => t.status === 'completed').length === 0 && (
                   <div className="bg-white rounded-[2.5rem] p-20 text-center border border-slate-100">
                     <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-3xl flex items-center justify-center mx-auto mb-6"><Clock size={32} /></div>
