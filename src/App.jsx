@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
-import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, RotateCw, Calendar, CheckCircle, Trash2, ShieldCheck, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, RotateCw, Calendar, CheckCircle, Trash2, ShieldCheck, ChevronDown, MessageCircle } from 'lucide-react';
 
 const App = () => {
   const [view, setView] = useState('dashboard');
@@ -672,21 +672,34 @@ const App = () => {
                           </div>
                           <div className="flex items-center gap-3">
                             {task ? (
-                              <button onClick={() => openAssignModal(booking)} className="flex items-center gap-3 px-5 py-3 bg-white border border-slate-200 rounded-2xl hover:border-airbnb hover:shadow-lg transition-all relative overflow-hidden group/btn">
-                                <div className="absolute inset-x-0 bottom-0 h-0.5 bg-airbnb origin-left scale-x-0 group-hover/btn:scale-x-100 transition-transform duration-500"></div>
-                                <div className="w-8 h-8 rounded-full bg-pink-50 flex items-center justify-center text-airbnb overflow-hidden border border-pink-100 shadow-sm">
-                                  {task.cleaners?.avatar_url ? (
-                                    <img src={task.cleaners.avatar_url} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <User size={16} />
-                                  )}
-                                </div>
-                                <div className="text-left">
-                                  <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none">Assignee</p>
-                                  <p className="text-sm font-black text-slate-700">{task.cleaners?.name}</p>
-                                </div>
-                                {task.status === 'completed' ? <CheckCircle size={18} className="text-emerald-500 ml-2" /> : <div className={`w-2.5 h-2.5 rounded-full ml-2 animate-pulse ${task.cleaner_id ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-400'}`} />}
-                              </button>
+                              <>
+                                <button onClick={() => openAssignModal(booking)} className="flex items-center gap-3 px-5 py-3 bg-white border border-slate-200 rounded-2xl hover:border-airbnb hover:shadow-lg transition-all relative overflow-hidden group/btn">
+                                  <div className="absolute inset-x-0 bottom-0 h-0.5 bg-airbnb origin-left scale-x-0 group-hover/btn:scale-x-100 transition-transform duration-500"></div>
+                                  <div className="w-8 h-8 rounded-full bg-pink-50 flex items-center justify-center text-airbnb overflow-hidden border border-pink-100 shadow-sm">
+                                    {task.cleaners?.avatar_url ? (
+                                      <img src={task.cleaners.avatar_url} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <User size={16} />
+                                    )}
+                                  </div>
+                                  <div className="text-left">
+                                    <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none">Assignee</p>
+                                    <p className="text-sm font-black text-slate-700">{task.cleaners?.name}</p>
+                                  </div>
+                                  {task.status === 'completed' ? <CheckCircle size={18} className="text-emerald-500 ml-2" /> : <div className={`w-2.5 h-2.5 rounded-full ml-2 animate-pulse ${task.cleaner_id ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-400'}`} />}
+                                </button>
+                                {task.cleaners?.phone && (
+                                  <a
+                                    href={`https://wasap.my/${task.cleaners.phone.replace(/\D/g, '')}/Cuci unit ${booking.propertyName}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 hover:bg-emerald-500 hover:text-white hover:shadow-lg hover:shadow-emerald-200 transition-all active:scale-95"
+                                    title="WhatsApp Cleaner"
+                                  >
+                                    <MessageCircle size={20} fill="currentColor" fillOpacity={0.2} />
+                                  </a>
+                                )}
+                              </>
                             ) : (
                               <button onClick={() => openAssignModal(booking)} className="bg-airbnb/5 text-airbnb hover:bg-airbnb hover:text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-sm hover:shadow-airbnb/20 active:scale-95">
                                 Assign Cleaner
@@ -746,13 +759,28 @@ const App = () => {
                                     <div
                                       key={i}
                                       onClick={(e) => { e.stopPropagation(); openAssignModal(b); }}
-                                      className="flex items-center justify-between gap-2 mb-1.5 last:mb-0 p-1.5 rounded-lg hover:bg-white/10 cursor-pointer transition-colors"
+                                      className="flex items-center justify-between gap-2 mb-1.5 last:mb-0 p-1.5 rounded-lg hover:bg-white/10 cursor-pointer transition-colors group/row"
                                     >
                                       <div className="flex items-center gap-2 truncate">
                                         <div className={`w-1.5 h-1.5 rounded-full ${task && task.cleaner_id ? 'bg-emerald-400' : 'bg-airbnb'}`}></div>
                                         <span className="truncate">{b.propertyName}</span>
+                                        {task?.cleaner_id && <span className="text-[8px] text-slate-400 truncate ml-1 opacity-70">({task.cleaners?.name})</span>}
                                       </div>
-                                      <RotateCw size={10} className="text-white/30" />
+                                      <div className="flex items-center gap-2">
+                                        {task?.cleaners?.phone && (
+                                          <a
+                                            href={`https://wasap.my/${task.cleaners.phone.replace(/\D/g, '')}/Cuci unit ${b.propertyName}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="p-1 text-slate-400 hover:text-emerald-400 transition-colors"
+                                            title="WhatsApp Cleaner"
+                                          >
+                                            <MessageCircle size={10} fill="currentColor" fillOpacity={0.2} />
+                                          </a>
+                                        )}
+                                        <RotateCw size={10} className="text-white/30" />
+                                      </div>
                                     </div>
                                   );
                                 })}
@@ -816,120 +844,128 @@ const App = () => {
             </>
           )}
         </div>
-      </main>
+      </main >
 
       {/* Modals */}
-      {showNewTaskModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-in fade-in zoom-in duration-200">
-            <h3 className="text-2xl font-bold mb-6">New Property</h3>
-            <form onSubmit={handleAddUnit} className="space-y-4">
-              <input type="text" required placeholder="Unit Name" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={newUnit.name} onChange={e => setNewUnit({ ...newUnit, name: e.target.value })} />
-              <div className="grid grid-cols-2 gap-4">
-                <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={newUnit.area} onChange={e => setNewUnit({ ...newUnit, area: e.target.value })}><option>Shah Alam</option><option>Puchong</option></select>
-                <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={newUnit.priority} onChange={e => setNewUnit({ ...newUnit, priority: e.target.value })}><option>Normal</option><option>High</option></select>
-              </div>
-              <input type="text" placeholder="iCal URL" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={newUnit.ical_url} onChange={e => setNewUnit({ ...newUnit, ical_url: e.target.value })} />
-              <div className="flex gap-3 pt-4"><button type="button" onClick={() => setShowNewTaskModal(false)} className="flex-1 bg-slate-100 py-4 rounded-xl font-bold">Cancel</button><button type="submit" disabled={loading} className="flex-1 bg-airbnb text-white py-4 rounded-xl font-bold">Add Unit</button></div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showManageModal && selectedUnit && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-in fade-in zoom-in duration-200">
-            <h3 className="text-2xl font-bold mb-6">Manage Unit</h3>
-            <form onSubmit={handleUpdateUnit} className="space-y-4">
-              <input type="text" required className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.name} onChange={e => setSelectedUnit({ ...selectedUnit, name: e.target.value })} />
-              <div className="grid grid-cols-2 gap-4">
-                <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.area} onChange={e => setSelectedUnit({ ...selectedUnit, area: e.target.value })}><option>Shah Alam</option><option>Puchong</option></select>
-                <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.priority} onChange={e => setSelectedUnit({ ...selectedUnit, priority: e.target.value })}><option>Normal</option><option>High</option></select>
-              </div>
-              <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.status} onChange={e => setSelectedUnit({ ...selectedUnit, status: e.target.value })}><option>Ready</option><option>Cleaning</option><option>Maintenance</option></select>
-              <input type="text" placeholder="iCal URL" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.ical_url || ''} onChange={e => setSelectedUnit({ ...selectedUnit, ical_url: e.target.value })} />
-              <div className="flex gap-3 pt-4"><button type="button" onClick={handleDeleteUnit} className="flex-1 bg-rose-50 text-rose-500 py-4 rounded-xl font-bold">Delete</button><button type="submit" className="flex-1 bg-airbnb text-white py-4 rounded-xl font-bold">Save</button></div>
-              <button type="button" onClick={() => setShowManageModal(false)} className="w-full text-slate-400 font-bold py-2">Close</button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showCleanerModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-in fade-in zoom-in duration-200">
-            <h3 className="text-2xl font-bold mb-6">{editingCleaner ? 'Edit Cleaner' : 'New Cleaner'}</h3>
-            <form onSubmit={handleCleanerSubmit} className="space-y-4">
-              <div className="flex justify-center mb-6">
-                <div className="relative group">
-                  <div className="w-24 h-24 rounded-full bg-slate-100 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center text-slate-300">
-                    {(editingCleaner?.avatar_url || newCleaner.avatar_url) ? (
-                      <img src={editingCleaner?.avatar_url || newCleaner.avatar_url} className="w-full h-full object-cover" />
-                    ) : (
-                      <User size={40} />
-                    )}
-                  </div>
-                  <label className="absolute bottom-0 right-0 w-8 h-8 bg-airbnb text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform">
-                    <Plus size={16} strokeWidth={3} />
-                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleAvatarUpload(e, !!editingCleaner)} />
-                  </label>
+      {
+        showNewTaskModal && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-in fade-in zoom-in duration-200">
+              <h3 className="text-2xl font-bold mb-6">New Property</h3>
+              <form onSubmit={handleAddUnit} className="space-y-4">
+                <input type="text" required placeholder="Unit Name" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={newUnit.name} onChange={e => setNewUnit({ ...newUnit, name: e.target.value })} />
+                <div className="grid grid-cols-2 gap-4">
+                  <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={newUnit.area} onChange={e => setNewUnit({ ...newUnit, area: e.target.value })}><option>Shah Alam</option><option>Puchong</option></select>
+                  <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={newUnit.priority} onChange={e => setNewUnit({ ...newUnit, priority: e.target.value })}><option>Normal</option><option>High</option></select>
                 </div>
-              </div>
-              <input type="text" required placeholder="Name" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={editingCleaner ? editingCleaner.name : newCleaner.name} onChange={e => editingCleaner ? setEditingCleaner({ ...editingCleaner, name: e.target.value }) : setNewCleaner({ ...newCleaner, name: e.target.value })} />
-              <input type="text" placeholder="Phone" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={editingCleaner ? editingCleaner.phone : newCleaner.phone} onChange={e => editingCleaner ? setEditingCleaner({ ...editingCleaner, phone: e.target.value }) : setNewCleaner({ ...newCleaner, phone: e.target.value })} />
-              <div className="grid grid-cols-2 gap-4">
-                <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={editingCleaner ? editingCleaner.role : newCleaner.role} onChange={e => editingCleaner ? setEditingCleaner({ ...editingCleaner, role: e.target.value }) : setNewCleaner({ ...newCleaner, role: e.target.value })}><option value="cleaner">Cleaner</option><option value="head_cleaner">Head Cleaner</option></select>
-                <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={editingCleaner ? (editingCleaner.head_cleaner_id || '') : newCleaner.head_cleaner_id} onChange={e => editingCleaner ? setEditingCleaner({ ...editingCleaner, head_cleaner_id: e.target.value }) : setNewCleaner({ ...newCleaner, head_cleaner_id: e.target.value })}><option value="">None (Admin)</option>{cleaners.filter(c => c.role === 'head_cleaner' && c.id !== editingCleaner?.id).map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}</select>
-              </div>
-              <div className="flex gap-3 pt-4"><button type="button" onClick={() => setShowCleanerModal(false)} className="flex-1 bg-slate-100 py-4 rounded-xl font-bold">Cancel</button><button type="submit" className="flex-1 bg-airbnb text-white py-4 rounded-xl font-bold">Save</button></div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showAssignModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowAssignModal(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative flex flex-col" onClick={e => e.stopPropagation()}>
-            <h3 className="text-2xl font-bold mb-2">Assign Cleaner</h3>
-            <p className="text-sm text-slate-500 mb-6">
-              {selectedUnit?.name || 'Unit'} - {selectedBooking?.end ? new Date(selectedBooking.end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'Date'}
-            </p>
-            <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
-              {cleaners.map(c => (
-                <button
-                  key={c.id}
-                  onClick={() => handleAssignCleaner(c.id)}
-                  className="w-full flex items-center gap-4 p-4 border rounded-3xl hover:bg-airbnb/5 hover:border-airbnb transition-all text-left group/row"
-                >
-                  <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 overflow-hidden border-2 border-white shadow-sm transition-transform group-hover/row:scale-110">
-                    {c.avatar_url ? (
-                      <img src={c.avatar_url} className="w-full h-full object-cover" />
-                    ) : (
-                      <User size={24} />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <span className="block font-black text-slate-700 text-base">{c.name}</span>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.1em]">{c.role.replace('_', ' ')}</span>
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-200 group-hover/row:bg-airbnb group-hover/row:text-white transition-all">
-                    <Plus size={16} />
-                  </div>
-                </button>
-              ))}
-              {cleaners.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-slate-500 italic mb-4">No cleaners available.</p>
-                  <button onClick={() => { setView('cleaners'); setShowAssignModal(false); }} className="text-airbnb font-bold text-sm underline">Add Team Member</button>
-                </div>
-              )}
+                <input type="text" placeholder="iCal URL" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={newUnit.ical_url} onChange={e => setNewUnit({ ...newUnit, ical_url: e.target.value })} />
+                <div className="flex gap-3 pt-4"><button type="button" onClick={() => setShowNewTaskModal(false)} className="flex-1 bg-slate-100 py-4 rounded-xl font-bold">Cancel</button><button type="submit" disabled={loading} className="flex-1 bg-airbnb text-white py-4 rounded-xl font-bold">Add Unit</button></div>
+              </form>
             </div>
-            <button onClick={() => setShowAssignModal(false)} className="w-full mt-6 py-4 text-slate-400 font-bold hover:text-slate-600 transition-colors">Cancel</button>
           </div>
-        </div>
-      )}
+        )
+      }
 
-    </div>
+      {
+        showManageModal && selectedUnit && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-in fade-in zoom-in duration-200">
+              <h3 className="text-2xl font-bold mb-6">Manage Unit</h3>
+              <form onSubmit={handleUpdateUnit} className="space-y-4">
+                <input type="text" required className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.name} onChange={e => setSelectedUnit({ ...selectedUnit, name: e.target.value })} />
+                <div className="grid grid-cols-2 gap-4">
+                  <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.area} onChange={e => setSelectedUnit({ ...selectedUnit, area: e.target.value })}><option>Shah Alam</option><option>Puchong</option></select>
+                  <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.priority} onChange={e => setSelectedUnit({ ...selectedUnit, priority: e.target.value })}><option>Normal</option><option>High</option></select>
+                </div>
+                <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.status} onChange={e => setSelectedUnit({ ...selectedUnit, status: e.target.value })}><option>Ready</option><option>Cleaning</option><option>Maintenance</option></select>
+                <input type="text" placeholder="iCal URL" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.ical_url || ''} onChange={e => setSelectedUnit({ ...selectedUnit, ical_url: e.target.value })} />
+                <div className="flex gap-3 pt-4"><button type="button" onClick={handleDeleteUnit} className="flex-1 bg-rose-50 text-rose-500 py-4 rounded-xl font-bold">Delete</button><button type="submit" className="flex-1 bg-airbnb text-white py-4 rounded-xl font-bold">Save</button></div>
+                <button type="button" onClick={() => setShowManageModal(false)} className="w-full text-slate-400 font-bold py-2">Close</button>
+              </form>
+            </div>
+          </div>
+        )
+      }
+
+      {
+        showCleanerModal && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-in fade-in zoom-in duration-200">
+              <h3 className="text-2xl font-bold mb-6">{editingCleaner ? 'Edit Cleaner' : 'New Cleaner'}</h3>
+              <form onSubmit={handleCleanerSubmit} className="space-y-4">
+                <div className="flex justify-center mb-6">
+                  <div className="relative group">
+                    <div className="w-24 h-24 rounded-full bg-slate-100 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center text-slate-300">
+                      {(editingCleaner?.avatar_url || newCleaner.avatar_url) ? (
+                        <img src={editingCleaner?.avatar_url || newCleaner.avatar_url} className="w-full h-full object-cover" />
+                      ) : (
+                        <User size={40} />
+                      )}
+                    </div>
+                    <label className="absolute bottom-0 right-0 w-8 h-8 bg-airbnb text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform">
+                      <Plus size={16} strokeWidth={3} />
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleAvatarUpload(e, !!editingCleaner)} />
+                    </label>
+                  </div>
+                </div>
+                <input type="text" required placeholder="Name" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={editingCleaner ? editingCleaner.name : newCleaner.name} onChange={e => editingCleaner ? setEditingCleaner({ ...editingCleaner, name: e.target.value }) : setNewCleaner({ ...newCleaner, name: e.target.value })} />
+                <input type="text" placeholder="Phone" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={editingCleaner ? editingCleaner.phone : newCleaner.phone} onChange={e => editingCleaner ? setEditingCleaner({ ...editingCleaner, phone: e.target.value }) : setNewCleaner({ ...newCleaner, phone: e.target.value })} />
+                <div className="grid grid-cols-2 gap-4">
+                  <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={editingCleaner ? editingCleaner.role : newCleaner.role} onChange={e => editingCleaner ? setEditingCleaner({ ...editingCleaner, role: e.target.value }) : setNewCleaner({ ...newCleaner, role: e.target.value })}><option value="cleaner">Cleaner</option><option value="head_cleaner">Head Cleaner</option></select>
+                  <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={editingCleaner ? (editingCleaner.head_cleaner_id || '') : newCleaner.head_cleaner_id} onChange={e => editingCleaner ? setEditingCleaner({ ...editingCleaner, head_cleaner_id: e.target.value }) : setNewCleaner({ ...newCleaner, head_cleaner_id: e.target.value })}><option value="">None (Admin)</option>{cleaners.filter(c => c.role === 'head_cleaner' && c.id !== editingCleaner?.id).map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}</select>
+                </div>
+                <div className="flex gap-3 pt-4"><button type="button" onClick={() => setShowCleanerModal(false)} className="flex-1 bg-slate-100 py-4 rounded-xl font-bold">Cancel</button><button type="submit" className="flex-1 bg-airbnb text-white py-4 rounded-xl font-bold">Save</button></div>
+              </form>
+            </div>
+          </div>
+        )
+      }
+
+      {
+        showAssignModal && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowAssignModal(false)}>
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative flex flex-col" onClick={e => e.stopPropagation()}>
+              <h3 className="text-2xl font-bold mb-2">Assign Cleaner</h3>
+              <p className="text-sm text-slate-500 mb-6">
+                {selectedUnit?.name || 'Unit'} - {selectedBooking?.end ? new Date(selectedBooking.end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'Date'}
+              </p>
+              <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
+                {cleaners.map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => handleAssignCleaner(c.id)}
+                    className="w-full flex items-center gap-4 p-4 border rounded-3xl hover:bg-airbnb/5 hover:border-airbnb transition-all text-left group/row"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 overflow-hidden border-2 border-white shadow-sm transition-transform group-hover/row:scale-110">
+                      {c.avatar_url ? (
+                        <img src={c.avatar_url} className="w-full h-full object-cover" />
+                      ) : (
+                        <User size={24} />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <span className="block font-black text-slate-700 text-base">{c.name}</span>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.1em]">{c.role.replace('_', ' ')}</span>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-200 group-hover/row:bg-airbnb group-hover/row:text-white transition-all">
+                      <Plus size={16} />
+                    </div>
+                  </button>
+                ))}
+                {cleaners.length === 0 && (
+                  <div className="text-center py-8">
+                    <p className="text-slate-500 italic mb-4">No cleaners available.</p>
+                    <button onClick={() => { setView('cleaners'); setShowAssignModal(false); }} className="text-airbnb font-bold text-sm underline">Add Team Member</button>
+                  </div>
+                )}
+              </div>
+              <button onClick={() => setShowAssignModal(false)} className="w-full mt-6 py-4 text-slate-400 font-bold hover:text-slate-600 transition-colors">Cancel</button>
+            </div>
+          </div>
+        )
+      }
+
+    </div >
   );
 };
 
