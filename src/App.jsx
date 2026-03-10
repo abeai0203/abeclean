@@ -79,7 +79,6 @@ const App = () => {
       setSession(currentSession);
       if (currentSession) {
         setIsAdminAuthenticated(true);
-        fetchData();
       }
     });
 
@@ -88,13 +87,15 @@ const App = () => {
       setSession(session);
       if (session) {
         setIsAdminAuthenticated(true);
-        fetchData();
       } else {
-        setIsAdminAuthenticated(false);
+        // Only set authenticated false if we don't have a local bypass
+        if (!localStorage.getItem('ops_admin_access')) {
+          setIsAdminAuthenticated(false);
+        }
       }
     });
 
-    // 3. Realtime sub
+    // 3. Realtime sub for global updates
     const subscription = supabase
       .channel('schema-db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'properties' }, fetchProperties)
@@ -106,6 +107,14 @@ const App = () => {
       authSubscription.unsubscribe();
     };
   }, []);
+
+  // 4. Data Loading based on auth state
+  useEffect(() => {
+    if (isAdminAuthenticated) {
+      setShowOnboarding(false);
+      fetchData();
+    }
+  }, [isAdminAuthenticated, session?.user?.id]);
 
   // Persistent Progress for Cleaner View
   useEffect(() => {
@@ -140,25 +149,28 @@ const App = () => {
     const params = new URLSearchParams(window.location.search);
     
     // 1. Special Admin Bypass
-    // Use ?pass=boss to activate special access once
     if (params.get('pass') === 'boss') {
       localStorage.setItem('ops_admin_access', 'true');
       setIsAdminAuthenticated(true);
       setCurrentUserRole('admin');
-      // Clean the URL without refresh
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    // 2. Cleaner Task Link
+    // 2. Local Bypass Check
+    if (localStorage.getItem('ops_admin_access')) {
+      setIsAdminAuthenticated(true);
+    }
+
+    // 3. Cleaner Task Link
     const taskId = params.get('task_id');
     if (taskId) {
       setLoadingCleanerTask(true);
       loadCleanerTask(taskId).finally(() => setLoadingCleanerTask(false));
-    } else if (!isAdminAuthenticated) {
-      // If not admin and not cleaner link, show onboarding/login
+    } else if (!isAdminAuthenticated && !session) {
+      // If not authenticated (no session, no bypass) and not a task link, show login
       setShowOnboarding(true);
     }
-  }, [isAdminAuthenticated]);
+  }, [isAdminAuthenticated, session]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -397,17 +409,33 @@ const App = () => {
   };
 
   const handleLogin = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    if (!loginForm.email || !loginForm.password) return;
+    
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('Attempting sign in...');
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: loginForm.email,
         password: loginForm.password
       });
-      if (error) throw error;
+      
+      if (error) {
+        // Special helpful error for email confirmation
+        if (error.message.includes('Email not confirmed')) {
+          throw new Error('Email belum disahkan. Sila check inbox atau tutup "Confirm Email" kat Supabase Dash.');
+        }
+        throw error;
+      }
+
+      console.log('Login success! Session:', data.session);
+      setSession(data.session);
+      setIsAdminAuthenticated(true);
       setShowOnboarding(false);
+      
     } catch (err) {
-      alert('Login Error: ' + err.message);
+      console.error('Login Failure:', err);
+      alert('Ralat Login: ' + err.message);
     } finally {
       setLoading(false);
     }
