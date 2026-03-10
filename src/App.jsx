@@ -60,16 +60,44 @@ const App = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cleaning_tasks' }, fetchCleaningTasks)
       .subscribe();
 
-    // Check for task_id in URL for cleaner mode
-    const params = new URLSearchParams(window.location.search);
-    const taskId = params.get('task_id');
-    if (taskId) {
-      setLoadingCleanerTask(true);
-      loadCleanerTask(taskId).finally(() => setLoadingCleanerTask(false));
-    }
-
     return () => supabase.removeChannel(subscription);
   }, []);
+
+  // Persistent Progress for Cleaner View
+  useEffect(() => {
+    if (activeCleanerTask?.id) {
+      const saved = localStorage.getItem(`task_${activeCleanerTask.id}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setActiveCleanerTask(prev => ({
+            ...prev,
+            checklist_responses: parsed.checklist_responses || prev.checklist_responses,
+            proof_images: parsed.proof_images || prev.proof_images
+          }));
+        } catch (e) {
+          console.error('Error loading saved task progress:', e);
+        }
+      }
+    }
+  }, [activeCleanerTask?.id]);
+
+  useEffect(() => {
+    if (activeCleanerTask?.id && activeCleanerTask.status !== 'completed') {
+      const dataToSave = {
+        checklist_responses: activeCleanerTask.checklist_responses,
+        proof_images: activeCleanerTask.proof_images
+      };
+      localStorage.setItem(`task_${activeCleanerTask.id}`, JSON.stringify(dataToSave));
+    }
+  }, [activeCleanerTask?.checklist_responses, activeCleanerTask?.proof_images]);
+  // Check for task_id in URL for cleaner mode
+  const params = new URLSearchParams(window.location.search);
+  const taskId = params.get('task_id');
+  if (taskId) {
+    setLoadingCleanerTask(true);
+    loadCleanerTask(taskId).finally(() => setLoadingCleanerTask(false));
+  }
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -591,12 +619,14 @@ const App = () => {
                               <span className="text-[10px] font-black uppercase mt-2">Ambil Gambar</span>
                               <input
                                 type="file"
-                                accept="image/*"
-                                capture="camera"
+                                accept="image/*;capture=camera"
+                                capture="environment"
                                 className="hidden"
                                 onChange={async (e) => {
                                   const file = e.target.files?.[0];
                                   if (!file) return;
+
+                                  // Minimal logic here to avoid crash during handoff
                                   setLoading(true);
                                   try {
                                     const compressedFile = await compressImage(file);
@@ -606,9 +636,11 @@ const App = () => {
                                     const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, compressedFile);
                                     if (uploadError) throw uploadError;
                                     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
-                                    const newImgs = [...(activeCleanerTask.proof_images || []), publicUrl];
-                                    setActiveCleanerTask({ ...activeCleanerTask, proof_images: newImgs });
-                                    // Clear input to free memory
+
+                                    setActiveCleanerTask(prev => ({
+                                      ...prev,
+                                      proof_images: [...(prev.proof_images || []), publicUrl]
+                                    }));
                                     e.target.value = '';
                                   } catch (err) {
                                     console.error('Upload error:', err);
