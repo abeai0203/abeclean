@@ -136,8 +136,8 @@ const App = () => {
       img.src = objectUrl;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1024;
-        const MAX_HEIGHT = 1024;
+        const MAX_WIDTH = 800; // Lowered for Android stability
+        const MAX_HEIGHT = 800;
         let width = img.width;
         let height = img.height;
 
@@ -156,11 +156,17 @@ const App = () => {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
+
         canvas.toBlob((blob) => {
+          // Explicit Cleanup
           URL.revokeObjectURL(objectUrl);
-          if (!blob) return reject(new Error('Canvas toBlob failed'));
+          img.src = "";
+          canvas.width = 0;
+          canvas.height = 0;
+
+          if (!blob) return reject(new Error('Canvas blank error'));
           resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: 'image/webp', lastModified: Date.now() }));
-        }, 'image/webp', 0.5);
+        }, 'image/webp', 0.4); // Balanced quality for proof-of-work
       };
       img.onerror = () => {
         URL.revokeObjectURL(objectUrl);
