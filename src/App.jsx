@@ -388,7 +388,7 @@ const App = () => {
     setAuthView('login');
   };
 
-  const LoginView = () => {
+  const renderLoginView = () => {
     return (
       <div className="fixed inset-0 bg-white z-[200] flex flex-col font-sans overflow-hidden text-slate-900">
         <div className="flex-1 flex flex-col md:flex-row h-full overflow-hidden">
@@ -467,7 +467,7 @@ const App = () => {
     );
   };
 
-  const OnboardingView = () => {
+  const renderOnboardingView = () => {
     const totalSteps = 4;
     const progress = (onboardingStep / totalSteps) * 100;
 
@@ -1204,7 +1204,7 @@ const App = () => {
   }
 
   if (showOnboarding && !isAdminAuthenticated) {
-    return authView === 'login' ? <LoginView /> : <OnboardingView />;
+    return authView === 'login' ? renderLoginView() : renderOnboardingView();
   }
 
   return (
