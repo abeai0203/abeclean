@@ -80,6 +80,7 @@ const App = () => {
       if (currentSession) {
         setIsAdminAuthenticated(true);
       }
+      setLoading(false);
     });
 
     // 2. Auth State Change Listener
