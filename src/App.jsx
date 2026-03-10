@@ -1033,13 +1033,12 @@ const App = () => {
                       return new Date(t.completed_at).toLocaleDateString('en-GB') === todayStr;
                     }).length;
 
-                    // 2. Monthly Revenue (Total Cleans Value)
                     const monthlyTasks = cleaningTasks.filter(t => {
                       if (t.status !== 'completed' || !t.completed_at) return false;
                       const date = new Date(t.completed_at);
                       return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
                     });
-                    const monthlyRevenue = monthlyTasks.reduce((sum, t) => sum + parseFloat(t.properties?.cleaning_fee || 45), 0);
+                    const monthlyPayment = monthlyTasks.reduce((sum, t) => sum + parseFloat(t.properties?.cleaning_fee || 45), 0);
 
                     // 3. Top Cleaner of the month
                     const cleanerStats = monthlyTasks.reduce((acc, t) => {
@@ -1052,23 +1051,32 @@ const App = () => {
 
                     return (
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-                        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5 group hover:shadow-xl transition-all">
+                        <button 
+                          onClick={() => setView('payments')}
+                          className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5 group hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all text-left"
+                        >
                           <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform"><CheckCircle size={28} /></div>
                           <div>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Siap Hari Ini</p>
                             <p className="text-2xl font-black text-slate-900">{tasksDoneToday} <span className="text-xs text-slate-400">Unit</span></p>
                           </div>
-                        </div>
+                        </button>
 
-                        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5 group hover:shadow-xl transition-all">
+                        <button 
+                          onClick={() => setView('payments')}
+                          className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5 group hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all text-left"
+                        >
                           <div className="w-14 h-14 rounded-2xl bg-airbnb/5 text-airbnb flex items-center justify-center group-hover:scale-110 transition-transform"><Banknote size={28} /></div>
                           <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Revenue {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][currentMonth]}</p>
-                            <p className="text-2xl font-black text-slate-900">RM {monthlyRevenue.toFixed(0)}</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Bayaran {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][currentMonth]}</p>
+                            <p className="text-2xl font-black text-slate-900">RM {monthlyPayment.toFixed(0)}</p>
                           </div>
-                        </div>
+                        </button>
 
-                        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5 group hover:shadow-xl transition-all">
+                        <button 
+                          onClick={() => setView('payments')}
+                          className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5 group hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all text-left"
+                        >
                           <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center group-hover:scale-110 transition-transform">
                             {topCleaner?.avatar_url ? <img src={topCleaner.avatar_url} className="w-full h-full object-cover rounded-2xl" /> : <Star size={28} />}
                           </div>
@@ -1079,7 +1087,7 @@ const App = () => {
                               {topCleaner && <span className="bg-slate-100 px-2 py-0.5 rounded-lg text-[10px] font-black text-slate-500">{cleanerStats[topCleanerId]} Unit</span>}
                             </div>
                           </div>
-                        </div>
+                        </button>
                       </div>
                     );
                   })()}
