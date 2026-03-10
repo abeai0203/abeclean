@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
-import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, RotateCw, RotateCcw, Calendar, CheckCircle, Trash2, ShieldCheck, ChevronDown, MessageCircle, Bell, Camera, Banknote } from 'lucide-react';
+import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, RotateCw, RotateCcw, Calendar, CheckCircle, Trash2, ShieldCheck, ChevronDown, MessageCircle, Bell, Camera, Banknote, LogOut, Mail, Lock } from 'lucide-react';
 
 const App = () => {
   const [view, setView] = useState('dashboard');
@@ -9,10 +9,11 @@ const App = () => {
   const [properties, setProperties] = useState([]);
   const [cleaners, setCleaners] = useState([]);
   const [cleaningTasks, setCleaningTasks] = useState([]);
-  const [currentUserRole, setCurrentUserRole] = useState(localStorage.getItem('ops_admin_access') === 'true' ? 'admin' : 'admin');
+  const [currentUserRole, setCurrentUserRole] = useState('admin');
   const [currentCleanerId, setCurrentCleanerId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(localStorage.getItem('ops_admin_access') === 'true');
+  const [session, setSession] = useState(null);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [onboardingData, setOnboardingData] = useState({
@@ -22,8 +23,12 @@ const App = () => {
     cleaningFee: 45,
     icalUrl: '',
     cleanerName: '',
-    cleanerPhone: ''
+    cleanerPhone: '',
+    email: '',
+    password: ''
   });
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [authView, setAuthView] = useState('login'); // 'login' or 'onboarding'
 
   // Modals state
   const [showNewTaskModal, setShowNewTaskModal] = useState(false);
@@ -69,14 +74,37 @@ const App = () => {
   });
 
   useEffect(() => {
-    fetchData();
+    // 1. Initial Session Check
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      if (currentSession) {
+        setIsAdminAuthenticated(true);
+        fetchData();
+      }
+    });
+
+    // 2. Auth State Change Listener
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) {
+        setIsAdminAuthenticated(true);
+        fetchData();
+      } else {
+        setIsAdminAuthenticated(false);
+      }
+    });
+
+    // 3. Realtime sub
     const subscription = supabase
       .channel('schema-db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'properties' }, fetchProperties)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cleaning_tasks' }, fetchCleaningTasks)
       .subscribe();
 
-    return () => supabase.removeChannel(subscription);
+    return () => {
+      supabase.removeChannel(subscription);
+      authSubscription.unsubscribe();
+    };
   }, []);
 
   // Persistent Progress for Cleaner View
@@ -160,6 +188,7 @@ const App = () => {
     const { data, error } = await supabase
       .from('properties')
       .select('*')
+      .eq('owner_id', session?.user?.id)
       .order('priority', { ascending: false });
 
     if (error) console.error('Error fetching properties:', error);
@@ -170,6 +199,7 @@ const App = () => {
     const { data, error } = await supabase
       .from('cleaners')
       .select('*')
+      .eq('owner_id', session?.user?.id)
       .order('name');
 
     if (error) console.error('Error fetching cleaners:', error);
@@ -179,7 +209,8 @@ const App = () => {
   const fetchCleaningTasks = async () => {
     const { data, error } = await supabase
       .from('cleaning_tasks')
-      .select('*, cleaners(name, avatar_url, phone), properties(name, area)');
+      .select('*, cleaners(name, avatar_url, phone), properties(name, area)')
+      .eq('owner_id', session?.user?.id);
 
     if (error) console.error('Error fetching tasks:', error);
     else {
@@ -255,6 +286,7 @@ const App = () => {
     const { data, error } = await supabase
       .from('checklist_items')
       .select('*')
+      .eq('owner_id', session?.user?.id)
       .order('category', { ascending: false });
 
     if (error || !data || data.length === 0) {
@@ -266,7 +298,7 @@ const App = () => {
         { category: 'Tandas', item_text: 'Cuci mangkuk tandas' }
       ];
       setChecklistItems(defaults.map((d, i) => ({ ...d, id: 1000 + i }))); // Temp UI state
-      await supabase.from('checklist_items').insert(defaults);
+      await supabase.from('checklist_items').insert(defaults.map(d => ({ ...d, owner_id: session?.user?.id })));
       fetchChecklistItems();
     } else {
       setChecklistItems(data);
@@ -276,7 +308,24 @@ const App = () => {
   const handleOnboardingComplete = async () => {
     setLoading(true);
     try {
-      // 1. Create Property
+      // 1. Register User in Supabase
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: onboardingData.email,
+        password: onboardingData.password,
+        options: {
+          data: {
+            business_name: onboardingData.businessName,
+            location: onboardingData.location
+          }
+        }
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Registration failed');
+
+      const ownerId = authData.user.id;
+
+      // 2. Create Property
       const { data: propData, error: propError } = await supabase
         .from('properties')
         .insert([{
@@ -285,34 +334,137 @@ const App = () => {
           cleaning_fee: onboardingData.cleaningFee,
           ical_url: onboardingData.icalUrl,
           status: 'Ready',
-          priority: 'Normal'
+          priority: 'Normal',
+          owner_id: ownerId
         }])
         .select();
 
       if (propError) throw propError;
 
-      // 2. Create Cleaner if name provided
+      // 3. Create Cleaner if name provided
       if (onboardingData.cleanerName) {
         const { error: cleanerError } = await supabase
           .from('cleaners')
           .insert([{
             name: onboardingData.cleanerName,
             phone: onboardingData.cleanerPhone,
-            role: 'cleaner'
+            role: 'cleaner',
+            owner_id: ownerId
           }]);
         if (cleanerError) throw cleanerError;
       }
 
-      // 3. Set local auth to keep user in
-      localStorage.setItem('ops_admin_access', 'true');
-      setIsAdminAuthenticated(true);
       setShowOnboarding(false);
       fetchData();
     } catch (err) {
-      alert('Error during setup: ' + err.message);
+      alert('Error: ' + err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginForm.email,
+        password: loginForm.password
+      });
+      if (error) throw error;
+      setShowOnboarding(false);
+    } catch (err) {
+      alert('Login Error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem('ops_admin_access');
+    setIsAdminAuthenticated(false);
+    setShowOnboarding(true);
+    setAuthView('login');
+  };
+
+  const LoginView = () => {
+    return (
+      <div className="fixed inset-0 bg-white z-[200] flex flex-col font-sans overflow-hidden text-slate-900">
+        <div className="flex-1 flex flex-col md:flex-row h-full overflow-hidden">
+          <div className="flex-1 p-8 md:p-20 flex flex-col justify-center max-w-xl mx-auto w-full">
+            <div className="flex items-center gap-3 mb-12">
+              <Sparkles className="w-10 h-10 text-airbnb" />
+              <h1 className="text-2xl font-black tracking-tight">OPS AIRBNB</h1>
+            </div>
+
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+              <h2 className="text-5xl font-black text-slate-900 leading-tight">Welcome back.</h2>
+              <p className="text-xl text-slate-500 font-medium">Log in to manage your spaces.</p>
+              
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <div className="relative group">
+                    <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-airbnb transition-colors" size={20} />
+                    <input 
+                      type="email" 
+                      placeholder="Email address"
+                      required
+                      className="w-full pl-16 pr-6 py-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb focus:ring-4 focus:ring-airbnb/5 outline-none transition-all font-bold"
+                      value={loginForm.email}
+                      onChange={e => setLoginForm({...loginForm, email: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="relative group">
+                    <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-airbnb transition-colors" size={20} />
+                    <input 
+                      type="password" 
+                      placeholder="Password"
+                      required
+                      className="w-full pl-16 pr-6 py-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb focus:ring-4 focus:ring-airbnb/5 outline-none transition-all font-bold"
+                      value={loginForm.password}
+                      onChange={e => setLoginForm({...loginForm, password: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <button 
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-slate-900 text-white py-6 rounded-3xl font-black text-lg shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  {loading ? 'Logging in...' : 'Login Now'}
+                </button>
+              </form>
+
+              <div className="pt-8 border-t border-slate-100 flex items-center justify-between">
+                <p className="text-slate-500 font-bold">New to OPS?</p>
+                <button 
+                  onClick={() => { setAuthView('onboarding'); setOnboardingStep(1); }}
+                  className="text-airbnb font-black hover:underline"
+                >
+                  Create Account
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div className="hidden md:flex flex-1 bg-slate-50 items-center justify-center p-20 relative overflow-hidden">
+             <div className="absolute inset-0 bg-gradient-to-br from-airbnb/5 to-transparent"></div>
+             <div className="relative z-10 w-full max-w-lg aspect-square bg-white rounded-[4rem] shadow-2xl border border-slate-100 flex items-center justify-center p-12">
+                <div className="text-center">
+                   <div className="w-20 h-20 bg-airbnb text-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-airbnb/30">
+                     <ShieldCheck size={40} />
+                   </div>
+                   <h3 className="text-3xl font-black text-slate-900 mb-4">Secure & Private.</h3>
+                   <p className="text-slate-500 font-medium">Your data is yours alone. Protected by industry-standard encryption.</p>
+                </div>
+             </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const OnboardingView = () => {
@@ -340,17 +492,37 @@ const App = () => {
             {onboardingStep === 1 && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 text-slate-900">
                 <h2 className="text-5xl md:text-6xl font-black text-slate-900 leading-[1.1]">Selamat Datang ke OPS AIRBNB.</h2>
-                <p className="text-xl text-slate-500 font-medium font-sans">Jom setup bisnes homestay boss dulu. Nama apa eh bisnes ni?</p>
+                <p className="text-xl text-slate-500 font-medium font-sans">Jom register account untuk bisnes boss.</p>
                 <div className="space-y-4">
-                  <div className="relative">
-                    <input 
-                      autoFocus
-                      type="text" 
-                      placeholder="Contoh: Abah Homestay Group"
-                      className="w-full text-2xl font-black p-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb focus:ring-4 focus:ring-airbnb/5 outline-none transition-all placeholder:text-slate-200"
-                      value={onboardingData.businessName}
-                      onChange={e => setOnboardingData({...onboardingData, businessName: e.target.value})}
-                    />
+                  <input 
+                    autoFocus
+                    type="text" 
+                    placeholder="Nama Bisnes (e.g. Abah Homestay Group)"
+                    className="w-full text-lg font-black p-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb outline-none transition-all"
+                    value={onboardingData.businessName}
+                    onChange={e => setOnboardingData({...onboardingData, businessName: e.target.value})}
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="relative group">
+                      <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-airbnb" size={20} />
+                      <input 
+                        type="email" 
+                        placeholder="Email"
+                        className="w-full pl-16 pr-6 py-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb outline-none transition-all font-bold"
+                        value={onboardingData.email}
+                        onChange={e => setOnboardingData({...onboardingData, email: e.target.value})}
+                      />
+                    </div>
+                    <div className="relative group">
+                      <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-airbnb" size={20} />
+                      <input 
+                        type="password" 
+                        placeholder="Password"
+                        className="w-full pl-16 pr-6 py-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb outline-none transition-all font-bold"
+                        value={onboardingData.password}
+                        onChange={e => setOnboardingData({...onboardingData, password: e.target.value})}
+                      />
+                    </div>
                   </div>
                   <select 
                     className="w-full text-lg font-bold p-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb outline-none bg-slate-50"
@@ -361,6 +533,11 @@ const App = () => {
                     <option>Puchong</option>
                     <option>Kuala Lumpur</option>
                   </select>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <p className="text-slate-500 font-bold text-sm">Dah ada account?</p>
+                  <button onClick={() => setAuthView('login')} className="text-airbnb font-black text-sm hover:underline">Login Sini</button>
                 </div>
               </div>
             )}
@@ -545,7 +722,7 @@ const App = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.from('properties').insert([newUnit]);
+      const { error } = await supabase.from('properties').insert([{ ...newUnit, owner_id: session?.user?.id }]);
       if (error) throw error;
 
       setShowNewTaskModal(false);
@@ -619,7 +796,7 @@ const App = () => {
         const { error } = await supabase.from('cleaners').update(cleanerData).eq('id', editingCleaner.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('cleaners').insert([cleanerData]);
+        const { error } = await supabase.from('cleaners').insert([{ ...cleanerData, owner_id: session?.user?.id }]);
         if (error) throw error;
       }
 
@@ -691,12 +868,13 @@ const App = () => {
 
       console.log('Assigning/Updating task:', { propertyId, checkoutDate, cleanerId });
 
-      // Check if task already exists for this property and date
+      // Check if task already exists for this property and date (scoped to owner)
       const { data: existingTask, error: fetchError } = await supabase
         .from('cleaning_tasks')
         .select('id')
         .eq('property_id', propertyId)
         .eq('checkout_date', checkoutDate)
+        .eq('owner_id', session?.user?.id)
         .maybeSingle();
 
       if (fetchError) throw fetchError;
@@ -716,6 +894,7 @@ const App = () => {
           checkout_date: checkoutDate,
           cleaner_id: cleanerId,
           status: 'pending',
+          owner_id: session?.user?.id,
           checklist: [
             { task: 'Change bedsheet & pillow covers', done: false },
             { task: 'Clean bathroom & refill toiletries', done: false },
@@ -1025,7 +1204,7 @@ const App = () => {
   }
 
   if (showOnboarding && !isAdminAuthenticated) {
-    return <OnboardingView />;
+    return authView === 'login' ? <LoginView /> : <OnboardingView />;
   }
 
   return (
@@ -1134,7 +1313,7 @@ const App = () => {
                       ];
                       // Only insert items that don't exist yet to avoid clutter
                       const existingTexts = new Set(checklistItems.map(i => i.item_text.toLowerCase()));
-                      const toAdd = defaults.filter(d => !existingTexts.has(d.item_text.toLowerCase()));
+                      const toAdd = defaults.filter(d => !existingTexts.has(d.item_text.toLowerCase())).map(item => ({ ...item, owner_id: session?.user?.id }));
                       if (toAdd.length > 0) {
                         await supabase.from('checklist_items').insert(toAdd);
                         fetchChecklistItems();
@@ -1178,7 +1357,7 @@ const App = () => {
                         className="flex-1 p-4 rounded-2xl border border-slate-100 bg-white font-bold"
                         onKeyDown={async (e) => {
                           if (e.key === 'Enter' && e.target.value) {
-                            await supabase.from('checklist_items').insert([{ category: cat, item_text: e.target.value }]);
+                            await supabase.from('checklist_items').insert([{ category: cat, item_text: e.target.value, owner_id: session?.user?.id }]);
                             e.target.value = '';
                             fetchChecklistItems();
                           }
@@ -1270,6 +1449,15 @@ const App = () => {
           <button onClick={() => { setView('cleaners'); setFilterArea('all'); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'cleaners' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
             <Users size={20} /> <span className="font-semibold text-sm">Cleaners</span>
           </button>
+          
+          <div className="pt-10 mt-auto">
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-rose-500 hover:bg-rose-50 transition-all font-bold"
+            >
+              <LogOut size={20} /> <span className="text-sm">Log Out</span>
+            </button>
+          </div>
           <div className="pt-6 text-[10px] uppercase font-bold text-slate-400 mb-2 px-3 tracking-widest">Areas</div>
           {['all', 'Shah Alam', 'Puchong'].map(area => (
             <button key={area} onClick={() => { setFilterArea(area); setView('dashboard'); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${filterArea === area && view === 'dashboard' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
