@@ -1078,7 +1078,7 @@ const App = () => {
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Next Checkout</p>
                               <p className="text-sm font-black text-slate-700">
                                 {nextBooking
-                                  ? `${property.checkout_time || '12:00 PM'} • ${new Date(nextBooking.end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}`
+                                  ? `${new Date(nextBooking.end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} (${property.checkout_time || '12:00 PM'})`
                                   : 'No upcoming checkout'}
                               </p>
                             </div>
