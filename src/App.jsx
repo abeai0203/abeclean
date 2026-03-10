@@ -33,6 +33,9 @@ const App = () => {
   const [reviewTask, setReviewTask] = useState(null);
   const [loadingCleanerTask, setLoadingCleanerTask] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [paymentDetailCleaner, setPaymentDetailCleaner] = useState(null);
 
   const [newUnit, setNewUnit] = useState({
     name: '',
@@ -490,6 +493,32 @@ const App = () => {
     } finally {
       setLoading(false);
     }
+  }
+
+  const handleMarkAsPaid = async (taskId) => {
+    try {
+      const { error } = await supabase
+        .from('cleaning_tasks')
+        .update({ paid_at: new Date().toISOString() })
+        .eq('id', taskId);
+      if (error) throw error;
+      fetchCleaningTasks();
+    } catch (err) { alert('Error: ' + err.message); }
+  }
+
+  const handleMarkAllAsPaid = async (cleanerId, tasks) => {
+    const unpaidTasks = tasks.filter(t => !t.paid_at);
+    if (unpaidTasks.length === 0) return;
+    if (!confirm(`Tanda semua ${unpaidTasks.length} tugasan sebagai telah dibayar?`)) return;
+    try {
+      const taskIds = unpaidTasks.map(t => t.id);
+      const { error } = await supabase
+        .from('cleaning_tasks')
+        .update({ paid_at: new Date().toISOString() })
+        .in('id', taskIds);
+      if (error) throw error;
+      fetchCleaningTasks();
+    } catch (err) { alert('Error: ' + err.message); }
   }
 
   const handleImageUpload = async (file) => {
@@ -1540,15 +1569,41 @@ const App = () => {
                   <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-slate-600 hover:bg-white rounded-lg"><Menu size={24} /></button>
                   <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Payments & Earnings</h2>
                 </div>
+                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm ml-auto">
+                  <select 
+                    value={selectedMonth} 
+                    onChange={e => setSelectedMonth(parseInt(e.target.value))}
+                    className="bg-transparent border-none text-xs font-black uppercase tracking-widest focus:ring-0"
+                  >
+                    {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
+                      <option key={i} value={i}>{m}</option>
+                    ))}
+                  </select>
+                  <select 
+                    value={selectedYear} 
+                    onChange={e => setSelectedYear(parseInt(e.target.value))}
+                    className="bg-transparent border-none text-xs font-black uppercase tracking-widest focus:ring-0"
+                  >
+                    {[2024, 2025, 2026].map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
               </header>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {cleaners.map(cleaner => {
-                  const tasks = cleaningTasks.filter(t => t.cleaner_id === cleaner.id && t.status === 'completed');
-                  const totalEarnings = tasks.reduce((sum, t) => {
-                    const fee = t.properties?.cleaning_fee || 45;
-                    return sum + parseFloat(fee);
-                  }, 0);
+                  const tasks = cleaningTasks.filter(t => {
+                    if (!t.cleaner_id || t.cleaner_id !== cleaner.id || t.status !== 'completed') return false;
+                    const date = new Date(t.completed_at);
+                    return date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
+                  });
+                  
+                  const unpaidTasks = tasks.filter(t => !t.paid_at);
+                  const paidTasks = tasks.filter(t => !!t.paid_at);
+                  
+                  const unpaidBalance = unpaidTasks.reduce((sum, t) => sum + parseFloat(t.properties?.cleaning_fee || 45), 0);
+                  const totalPaid = paidTasks.reduce((sum, t) => sum + parseFloat(t.properties?.cleaning_fee || 45), 0);
 
                   return (
                     <div key={cleaner.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all relative overflow-hidden group">
@@ -1565,22 +1620,24 @@ const App = () => {
                       </div>
 
                       <div className="space-y-4 relative">
-                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Accumulated Earnings</p>
-                          <p className="text-3xl font-black text-emerald-600">RM {totalEarnings.toFixed(2)}</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100">
+                            <p className="text-[8px] font-black text-rose-400 uppercase tracking-widest mb-1">Unpaid Balance</p>
+                            <p className="text-xl font-black text-rose-600">RM {unpaidBalance.toFixed(0)}</p>
+                          </div>
+                          <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                            <p className="text-[8px] font-black text-emerald-400 uppercase tracking-widest mb-1">Total Paid</p>
+                            <p className="text-xl font-black text-emerald-600">RM {totalPaid.toFixed(0)}</p>
+                          </div>
                         </div>
 
                         <div className="flex justify-between items-center px-2">
-                          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Completed Jobs</span>
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Jobs ({['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][selectedMonth]})</span>
                           <span className="text-sm font-black text-slate-700">{tasks.length} Units</span>
                         </div>
 
                         <button 
-                          onClick={() => {
-                            // Optionally we could show a details modal here
-                            // For now, let's just alert a summary or just leave it as is if users just want the total
-                            alert(`Breakdown for ${cleaner.name}:\n${tasks.map(t => `- ${t.properties?.name} (RM ${t.properties?.cleaning_fee || 45})`).join('\n') || 'No tasks'}`);
-                          }}
+                          onClick={() => setPaymentDetailCleaner(cleaner)}
                           className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all"
                         >
                           Lihat Detail
@@ -1718,6 +1775,118 @@ const App = () => {
         )
       }
 
+      {/* Payment Detail Modal */}
+      {paymentDetailCleaner && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
+            <header className="p-8 border-b border-slate-50 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-slate-900 flex items-center justify-center text-white overflow-hidden border-4 border-slate-100">
+                  {paymentDetailCleaner.avatar_url ? <img src={paymentDetailCleaner.avatar_url} className="w-full h-full object-cover" /> : <User size={28} />}
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-slate-900 leading-tight">{paymentDetailCleaner.name}</h3>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest italic">{['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][selectedMonth]} {selectedYear}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setPaymentDetailCleaner(null)}
+                className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all"
+              >
+                <Plus size={24} className="rotate-45" />
+              </button>
+            </header>
+
+            <div className="flex-1 overflow-y-auto p-8 space-y-8">
+              {(() => {
+                const tasks = cleaningTasks.filter(t => {
+                  if (!t.cleaner_id || t.cleaner_id !== paymentDetailCleaner.id || t.status !== 'completed') return false;
+                  const date = new Date(t.completed_at);
+                  return date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
+                });
+                const unpaid = tasks.filter(t => !t.paid_at);
+                const paid = tasks.filter(t => !!t.paid_at);
+                const unpaidSum = unpaid.reduce((sum, t) => sum + parseFloat(t.properties?.cleaning_fee || 45), 0);
+
+                return (
+                  <>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="p-6 bg-rose-50 rounded-3xl border border-rose-100 flex flex-col justify-between">
+                        <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">Unpaid Balance</p>
+                        <p className="text-3xl font-black text-rose-600">RM {unpaidSum.toFixed(2)}</p>
+                        {unpaid.length > 0 && (
+                          <button 
+                            onClick={() => handleMarkAllAsPaid(paymentDetailCleaner.id, unpaid)}
+                            className="mt-4 py-2 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-200"
+                          >
+                            Mark All as Paid
+                          </button>
+                        )}
+                      </div>
+                      <div className="p-6 bg-emerald-50 rounded-3xl border border-emerald-100 flex flex-col justify-center">
+                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Jobs Count</p>
+                        <p className="text-3xl font-black text-emerald-600">{tasks.length} <span className="text-sm">Units</span></p>
+                      </div>
+                    </div>
+                    {tasks.length === 0 ? (
+                      <div className="py-20 text-center bg-slate-50 rounded-[2.5rem] border border-dashed border-slate-200">
+                        <div className="w-16 h-16 bg-white text-slate-200 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-slate-100"><Banknote size={32} /></div>
+                        <h4 className="text-lg font-bold text-slate-400">Tiada tugasan bulan ini</h4>
+                        <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-black">Sila pilih bulan lain</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div>
+                          <h4 className="text-xs font-black text-rose-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                             <div className="w-2 h-2 rounded-full bg-rose-400"></div> Pending Payment ({unpaid.length})
+                          </h4>
+                          <div className="space-y-3">
+                            {unpaid.map(t => (
+                              <div key={t.id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                                <div>
+                                  <p className="font-black text-slate-800">{t.properties?.name}</p>
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(t.completed_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <span className="font-black text-rose-500">RM {t.properties?.cleaning_fee || 45}</span>
+                                  <button 
+                                    onClick={() => handleMarkAsPaid(t.id)}
+                                    className="px-3 py-1.5 bg-rose-50 text-rose-500 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all shadow-sm"
+                                  >
+                                    Done
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                            {unpaid.length === 0 && <p className="text-center py-4 text-slate-300 font-bold text-xs italic">All tasks paid!</p>}
+                          </div>
+                        </div>
+
+                        <div className="pt-6 border-t border-slate-100">
+                          <h4 className="text-xs font-black text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                             <div className="w-2 h-2 rounded-full bg-emerald-400"></div> Paid History ({paid.length})
+                          </h4>
+                          <div className="space-y-3">
+                            {paid.map(t => (
+                              <div key={t.id} className="flex items-center justify-between p-4 bg-slate-50/50 border border-slate-50 rounded-2xl opacity-60">
+                                <div>
+                                  <p className="font-bold text-slate-500">{t.properties?.name}</p>
+                                  <p className="text-[10px] font-bold text-slate-300 italic">Paid on {new Date(t.paid_at).toLocaleDateString('en-GB')}</p>
+                                </div>
+                                <span className="font-bold text-emerald-500 line-through">RM {t.properties?.cleaning_fee || 45}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 };
