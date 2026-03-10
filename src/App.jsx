@@ -158,8 +158,8 @@ const App = () => {
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
           canvas.toBlob((blob) => {
-            resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
-          }, 'image/jpeg', 0.7);
+            resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: 'image/webp', lastModified: Date.now() }));
+          }, 'image/webp', 0.6);
         };
       };
     });
@@ -568,7 +568,7 @@ const App = () => {
                                   try {
                                     // Compress image before upload to avoid memory issues and save bandwidth
                                     const compressedFile = await compressImage(file);
-                                    const fileExt = 'jpg'; // Force JPEG for compressed images
+                                    const fileExt = 'webp';
                                     const fileName = `${Math.random()}.${fileExt}`;
                                     const filePath = `proofs/${activeCleanerTask.id}/${fileName}`;
                                     const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, compressedFile);
