@@ -25,6 +25,7 @@ const App = () => {
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [editingCleaner, setEditingCleaner] = useState(null);
+  const [activePopoverDate, setActivePopoverDate] = useState(null);
 
   const [newUnit, setNewUnit] = useState({
     name: '',
@@ -52,6 +53,16 @@ const App = () => {
       .subscribe();
 
     return () => supabase.removeChannel(subscription);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.calendar-day-cell')) {
+        setActivePopoverDate(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const fetchData = async () => {
@@ -730,7 +741,14 @@ const App = () => {
                         const isToday = new Date().toDateString() === new Date(calendarDate.getFullYear(), calendarDate.getMonth(), d).toDateString();
 
                         days.push(
-                          <div key={d} className={`group aspect-square p-2 border border-slate-50 m-1 rounded-2xl relative transition-all duration-300 hover:border-airbnb hover:shadow-lg ${isToday ? 'bg-airbnb/5 border-airbnb/50' : 'bg-slate-50/50 hover:bg-white'}`}>
+                          <div
+                            key={d}
+                            onClick={(e) => {
+                              // On mobile/tablet, we want to toggle the popover
+                              setActivePopoverDate(activePopoverDate === dateString ? null : dateString);
+                            }}
+                            className={`calendar-day-cell group aspect-square p-2 border border-slate-50 m-1 rounded-2xl relative transition-all duration-300 hover:border-airbnb hover:shadow-lg ${isToday ? 'bg-airbnb/5 border-airbnb/50' : 'bg-slate-50/50 hover:bg-white'} ${activePopoverDate === dateString ? 'border-airbnb shadow-lg z-40' : ''}`}
+                          >
                             <span className={`text-xs font-black ${isToday ? 'text-airbnb' : 'text-slate-400 group-hover:text-slate-900'} transition-colors`}>{d}</span>
                             <div className="mt-1 space-y-1">
                               {checkouts.slice(0, 3).map((b, i) => {
@@ -746,9 +764,12 @@ const App = () => {
                               {checkouts.length > 3 && <div className="text-[7px] font-black text-slate-300 text-center">+{checkouts.length - 3} MORE</div>}
                             </div>
 
-                            {/* Hover Details Popover */}
+                            {/* Hover/Click Details Popover */}
                             {checkouts.length > 0 && (
-                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 bg-slate-900 text-white rounded-xl p-3 text-[10px] font-bold opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 scale-90 group-hover:scale-100 z-50 shadow-2xl">
+                              <div
+                                className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 bg-slate-900 text-white rounded-xl p-3 text-[10px] font-bold transition-all duration-300 scale-90 z-50 shadow-2xl ${activePopoverDate === dateString ? 'opacity-100 visible scale-100' : 'opacity-0 invisible group-hover:opacity-100 group-hover:visible group-hover:scale-100'}`}
+                                onClick={(e) => e.stopPropagation()} // Prevent clicking popover content from closing it
+                              >
                                 <div className="text-slate-400 mb-2 font-black uppercase tracking-[0.1em] border-b border-white/10 pb-1 flex justify-between">
                                   <span>Tasks: {checkouts.length}</span>
                                   <span className="text-[8px] text-airbnb">Click to Edit</span>
