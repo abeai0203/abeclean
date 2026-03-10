@@ -128,23 +128,59 @@ const App = () => {
     }
   };
 
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+          }, 'image/jpeg', 0.7);
+        };
+      };
+    });
+  };
+
   const fetchChecklistItems = async () => {
     const { data, error } = await supabase
       .from('checklist_items')
       .select('*')
       .order('category', { ascending: false });
 
-    if (error) {
-      console.warn('Checklist items table might not exist yet:', error.message);
-      // Fallback suggested items if table doesn't exist
+    if (error || !data || data.length === 0) {
+      console.warn('Using fallback checklist items');
       setChecklistItems([
-        { id: 1, category: 'Ruang Tamu', item_text: 'Vakum/Mop lantai' },
-        { id: 2, category: 'Ruang Tamu', item_text: 'Lap meja & kabinet' },
-        { id: 3, category: 'Bilik', item_text: 'Tukar cadar & sarung bantal' },
-        { id: 4, category: 'Tandas', item_text: 'Cuci mangkuk tandas' }
+        { id: 101, category: 'Ruang Tamu', item_text: 'Vakum/Mop lantai' },
+        { id: 102, category: 'Ruang Tamu', item_text: 'Lap meja & kabinet' },
+        { id: 103, category: 'Bilik', item_text: 'Tukar cadar & sarung bantal' },
+        { id: 104, category: 'Tandas', item_text: 'Cuci mangkuk tandas' }
       ]);
     } else {
-      setChecklistItems(data || []);
+      setChecklistItems(data);
     }
   };
 
@@ -475,7 +511,7 @@ const App = () => {
                           </button>
                         </div>
                         <div className="space-y-6">
-                          {['Ruang Tamu', 'Bilik', 'Tandas'].map(cat => (
+                          {Array.from(new Set(checklistItems.map(i => i.category))).map(cat => (
                             <div key={cat} className="space-y-3">
                               <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">{cat}</h4>
                               <div className="space-y-2">
@@ -530,10 +566,12 @@ const App = () => {
                                   if (!file) return;
                                   setLoading(true);
                                   try {
-                                    const fileExt = file.name.split('.').pop();
+                                    // Compress image before upload to avoid memory issues and save bandwidth
+                                    const compressedFile = await compressImage(file);
+                                    const fileExt = 'jpg'; // Force JPEG for compressed images
                                     const fileName = `${Math.random()}.${fileExt}`;
                                     const filePath = `proofs/${activeCleanerTask.id}/${fileName}`;
-                                    const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
+                                    const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, compressedFile);
                                     if (uploadError) throw uploadError;
                                     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
                                     const newImgs = [...(activeCleanerTask.proof_images || []), publicUrl];
