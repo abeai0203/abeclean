@@ -895,6 +895,9 @@ const App = () => {
           <button onClick={() => { setView('history'); setFilterArea('all'); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'history' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
             <Clock size={20} /> <span className="font-semibold text-sm">History</span>
           </button>
+          <button onClick={() => setShowChecklistSettings(true)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 transition-all">
+            <CheckCircle size={20} /> <span className="font-semibold text-sm">Checklist</span>
+          </button>
           <button onClick={() => { setView('cleaners'); setFilterArea('all'); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'cleaners' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
             <Users size={20} /> <span className="font-semibold text-sm">Cleaners</span>
           </button>
