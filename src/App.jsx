@@ -130,11 +130,19 @@ const App = () => {
   };
 
   const compressImage = async (file) => {
+    // Detect Android to avoid heavy canvas ops that cause "low memory" crash
+    const isAndroid = /Android/i.test(navigator.userAgent);
+
+    if (isAndroid) {
+      console.log('Android detected: Skipping compression to save memory.');
+      return file;
+    }
+
     // Wait for browser to recover after camera app closes
     await new Promise(r => setTimeout(r, 1000));
 
     try {
-      // Use standard JPEG for maximum compatibility on older Androids
+      // Use standard JPEG for maximum compatibility
       const MAX_SIZE = 480;
 
       // Attempt to resize during decoding (Fastest/Least RAM)
@@ -600,6 +608,8 @@ const App = () => {
                                     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
                                     const newImgs = [...(activeCleanerTask.proof_images || []), publicUrl];
                                     setActiveCleanerTask({ ...activeCleanerTask, proof_images: newImgs });
+                                    // Clear input to free memory
+                                    e.target.value = '';
                                   } catch (err) {
                                     console.error('Upload error:', err);
                                     alert('Gagal hantar gambar. Sila cuba lagi.');
