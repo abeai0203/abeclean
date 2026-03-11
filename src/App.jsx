@@ -1068,21 +1068,30 @@ const App = () => {
             Back
           </button>
           
-          <button 
-            onClick={() => {
-              console.log('Onboarding Step:', onboardingStep, 'Completing...');
-              if (onboardingStep === 4) handleOnboardingComplete();
-              else setOnboardingStep(onboardingStep + 1);
-            }}
-            disabled={
-              loading ||
-              (onboardingStep === 1 && (!onboardingData.businessName || !onboardingData.email || !onboardingData.password)) ||
-              (onboardingStep === 2 && !onboardingData.propertyName)
-            }
-            className={`px-12 py-5 rounded-2xl font-black text-sm uppercase tracking-widest text-white shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-30 disabled:scale-100 ${onboardingStep === 4 ? 'bg-emerald-500 shadow-emerald-200' : 'bg-airbnb shadow-airbnb/20'}`}
-          >
-            {loading ? 'Sila tunggu...' : (onboardingStep === 4 ? 'Complete Setup' : 'Next Step')}
-          </button>
+          <div className="flex items-center gap-4">
+            {(onboardingStep === 2 || onboardingStep === 3) && (
+              <button
+                onClick={() => setOnboardingStep(onboardingStep + 1)}
+                className="text-slate-400 font-bold text-sm hover:text-slate-600 transition-colors"
+              >
+                Skip →
+              </button>
+            )}
+            <button 
+              onClick={() => {
+                console.log('Onboarding Step:', onboardingStep, 'Completing...');
+                if (onboardingStep === 4) handleOnboardingComplete();
+                else setOnboardingStep(onboardingStep + 1);
+              }}
+              disabled={
+                loading ||
+                (onboardingStep === 1 && (!onboardingData.businessName || !onboardingData.email || !onboardingData.password))
+              }
+              className={`px-12 py-5 rounded-2xl font-black text-sm uppercase tracking-widest text-white shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-30 disabled:scale-100 ${onboardingStep === 4 ? 'bg-emerald-500 shadow-emerald-200' : 'bg-airbnb shadow-airbnb/20'}`}
+            >
+              {loading ? 'Sila tunggu...' : (onboardingStep === 4 ? 'Complete Setup' : onboardingStep === 2 || onboardingStep === 3 ? 'Seterusnya →' : 'Next Step')}
+            </button>
+          </div>
         </footer>
       </div>
     );
