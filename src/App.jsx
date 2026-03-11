@@ -135,11 +135,11 @@ const App = () => {
 
   // 4. Data Loading based on auth state
   useEffect(() => {
-    if (isAdminAuthenticated && session?.user?.id) {
+    const userId = session?.user?.id;
+    if (isAdminAuthenticated && userId) {
       // Avoid redundant fetches if we just manually fetched in onboarding
       if (!showOnboarding) {
-        setShowOnboarding(false);
-        fetchData();
+        fetchData(userId);
       }
     }
   }, [isAdminAuthenticated, session?.user?.id, showOnboarding]);
@@ -187,6 +187,7 @@ const App = () => {
     // 2. Local Bypass Check
     if (localStorage.getItem('ops_admin_access')) {
       setIsAdminAuthenticated(true);
+      // Even with bypass, we need to wait for the session if it's there
     }
 
     // 3. Cleaner Task Link
@@ -194,7 +195,7 @@ const App = () => {
     if (taskId) {
       setLoadingCleanerTask(true);
       loadCleanerTask(taskId).finally(() => setLoadingCleanerTask(false));
-    } else if (!isAdminAuthenticated && !session) {
+    } else if (!isAdminAuthenticated && !session && !localStorage.getItem('ops_admin_access')) {
       // If not authenticated (no session, no bypass) and not a task link, show login
       setShowOnboarding(true);
     }
