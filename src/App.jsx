@@ -532,6 +532,7 @@ const App = () => {
         }
       });
       if (error) throw error;
+      if (data.error) throw new Error(data.error);
       setAiAnalysis(data);
     } catch (err) {
       alert('AI Error: ' + err.message);
