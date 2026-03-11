@@ -92,8 +92,9 @@ const App = () => {
       setSession(currentSession);
       if (currentSession) {
         setIsAdminAuthenticated(true);
-      } else {
-        // If no session, show the login flow
+        setShowOnboarding(false); // Pastikan onboarding ditutup kalau ada session
+      } else if (!localStorage.getItem('ops_admin_access')) {
+        // Hanya tunjuk onboarding kalau tak ada session DAN tak ada admin bypass
         setShowOnboarding(true);
         setAuthView('login');
       }
@@ -195,9 +196,6 @@ const App = () => {
     if (taskId) {
       setLoadingCleanerTask(true);
       loadCleanerTask(taskId).finally(() => setLoadingCleanerTask(false));
-    } else if (!isAdminAuthenticated && !session && !localStorage.getItem('ops_admin_access')) {
-      // If not authenticated (no session, no bypass) and not a task link, show login
-      setShowOnboarding(true);
     }
   }, [isAdminAuthenticated, session]);
 
