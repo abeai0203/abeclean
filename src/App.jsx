@@ -57,6 +57,9 @@ const App = () => {
   const [paymentDetailCleaner, setPaymentDetailCleaner] = useState(null);
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [tempCategories, setTempCategories] = useState([]);
+  const [newCatName, setNewCatName] = useState('');
+  const [isAddingCat, setIsAddingCat] = useState(false);
 
   // Dynamic Areas derived from properties
   const availableAreas = [...new Set(properties.map(p => p.area).filter(Boolean))].sort();
@@ -1728,10 +1731,20 @@ const App = () => {
                 <Plus size={24} className="rotate-45" />
               </button>
             </header>
-            <div className="flex-1 overflow-y-auto p-8 space-y-6">
-              {['Ruang Tamu', 'Bilik', 'Tandas'].map(cat => (
-                <div key={cat} className="space-y-4">
-                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">{cat}</h4>
+            <div className="flex-1 overflow-y-auto p-8 space-y-8">
+              {[...new Set([...checklistItems.map(i => i.category), ...tempCategories])].map(cat => (
+                <div key={cat} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">{cat}</h4>
+                    {checklistItems.filter(i => i.category === cat).length === 0 && (
+                      <button 
+                        onClick={() => setTempCategories(prev => prev.filter(c => c !== cat))}
+                        className="text-[10px] font-bold text-rose-500 hover:text-rose-700"
+                      >
+                        Hapus Kategori
+                      </button>
+                    )}
+                  </div>
                   <div className="space-y-2">
                     {checklistItems.filter(i => i.category === cat).map((item, idx) => (
                       <div key={item.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 group">
@@ -1751,12 +1764,14 @@ const App = () => {
                       <input
                         type="text"
                         placeholder={`Add item to ${cat}...`}
-                        className="flex-1 p-4 rounded-2xl border border-slate-100 bg-white font-bold"
+                        className="flex-1 p-4 rounded-2xl border border-slate-100 bg-white font-bold focus:ring-2 focus:ring-airbnb/20 transition-all"
                         onKeyDown={async (e) => {
                           if (e.key === 'Enter' && e.target.value) {
                             await supabase.from('checklist_items').insert([{ category: cat, item_text: e.target.value, owner_id: session?.user?.id }]);
                             e.target.value = '';
                             fetchChecklistItems();
+                            // If it was a temp category, it will now be in checklistItems
+                            setTempCategories(prev => prev.filter(c => c !== cat));
                           }
                         }}
                       />
@@ -1764,6 +1779,64 @@ const App = () => {
                   </div>
                 </div>
               ))}
+
+              <div className="pt-4 border-t border-slate-50">
+                {!isAddingCat ? (
+                  <button 
+                    onClick={() => setIsAddingCat(true)}
+                    className="w-full py-4 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 text-slate-500 font-bold hover:bg-slate-100 hover:border-slate-300 transition-all flex items-center justify-center gap-2 group"
+                  >
+                    <Plus size={20} className="group-hover:scale-110 transition-transform" />
+                    + Kategori Baru
+                  </button>
+                ) : (
+                  <div className="bg-slate-50 p-6 rounded-[2rem] border-2 border-airbnb/20 animate-in zoom-in-95 duration-200">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Nama Kategori Baru</label>
+                    <div className="flex gap-2">
+                      <input 
+                        autoFocus
+                        type="text" 
+                        placeholder="e.g. Dapur / Balkoni" 
+                        className="flex-1 p-4 rounded-xl border border-airbnb/30 bg-white font-bold"
+                        value={newCatName}
+                        onChange={e => setNewCatName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newCatName) {
+                            if (!tempCategories.includes(newCatName)) {
+                              setTempCategories(prev => [...prev, newCatName]);
+                            }
+                            setNewCatName('');
+                            setIsAddingCat(false);
+                          }
+                        }}
+                      />
+                      <button 
+                        onClick={() => {
+                          if (newCatName) {
+                            if (!tempCategories.includes(newCatName)) {
+                              setTempCategories(prev => [...prev, newCatName]);
+                            }
+                            setNewCatName('');
+                            setIsAddingCat(false);
+                          }
+                        }}
+                        className="px-6 rounded-xl bg-airbnb text-white font-bold"
+                      >
+                        Tambah
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setIsAddingCat(false);
+                          setNewCatName('');
+                        }}
+                        className="px-4 rounded-xl bg-slate-200 text-slate-600 font-bold"
+                      >
+                        Batal
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
