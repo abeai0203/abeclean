@@ -71,6 +71,7 @@ const App = () => {
     cleaning_fee: 45,
     bookings: []
   });
+  const [isAddingNewArea, setIsAddingNewArea] = useState(false);
 
   const [newCleaner, setNewCleaner] = useState({
     name: '',
@@ -1029,7 +1030,8 @@ const App = () => {
       if (error) throw error;
 
       setShowNewTaskModal(false);
-      setNewUnit({ name: '', area: 'Shah Alam', status: 'Ready', priority: 'Normal', checkout_time: '12:00 PM', ical_url: '', bookings: [] });
+      setIsAddingNewArea(false);
+      setNewUnit({ name: '', area: availableAreas[0] || 'Shah Alam', status: 'Ready', priority: 'Normal', checkout_time: '12:00 PM', ical_url: '', cleaning_fee: 45, bookings: [] });
       fetchProperties();
     } catch (err) {
       alert(err.message);
@@ -2688,27 +2690,75 @@ const App = () => {
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-in fade-in zoom-in duration-200">
               <h3 className="text-2xl font-bold mb-6">New Property</h3>
-              <form onSubmit={handleAddUnit} className="space-y-4">
-                <input type="text" required placeholder="Unit Name" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={newUnit.name} onChange={e => setNewUnit({ ...newUnit, name: e.target.value })} />
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="relative">
-                    <input 
-                      type="text" 
-                      list="area-list"
-                      required 
-                      placeholder="Area (e.g. Shah Alam)" 
-                      className="w-full bg-slate-50 border rounded-xl px-4 py-3" 
-                      value={newUnit.area} 
-                      onChange={e => setNewUnit({ ...newUnit, area: e.target.value })} 
-                    />
-                    <datalist id="area-list">
-                      {availableAreas.map(a => <option key={a} value={a} />)}
-                    </datalist>
-                  </div>
-                  <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={newUnit.priority} onChange={e => setNewUnit({ ...newUnit, priority: e.target.value })}><option>Normal</option><option>High</option></select>
+              <form onSubmit={handleAddUnit} className="space-y-6">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Property Name</label>
+                  <input type="text" required placeholder="Unit Name" className="w-full bg-slate-50 border rounded-xl px-4 py-3 font-semibold focus:ring-2 focus:ring-airbnb/20 transition-all" value={newUnit.name} onChange={e => setNewUnit({ ...newUnit, name: e.target.value })} />
                 </div>
-                <input type="text" placeholder="iCal URL" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={newUnit.ical_url} onChange={e => setNewUnit({ ...newUnit, ical_url: e.target.value })} />
-                <div className="flex gap-3 pt-4"><button type="button" onClick={() => setShowNewTaskModal(false)} className="flex-1 bg-slate-100 py-4 rounded-xl font-bold">Cancel</button><button type="submit" disabled={loading} className="flex-1 bg-airbnb text-white py-4 rounded-xl font-bold">Add Unit</button></div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Select Area / Cluster</label>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {availableAreas.map(area => (
+                      <button
+                        key={area}
+                        type="button"
+                        onClick={() => {
+                          setNewUnit({ ...newUnit, area });
+                          setIsAddingNewArea(false);
+                        }}
+                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${newUnit.area === area && !isAddingNewArea ? 'bg-slate-900 border-slate-900 text-white shadow-lg' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-300'}`}
+                      >
+                        {area}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingNewArea(true);
+                        setNewUnit({ ...newUnit, area: '' });
+                      }}
+                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${isAddingNewArea ? 'bg-airbnb border-airbnb text-white shadow-lg' : 'bg-rose-50 border-rose-100 text-airbnb hover:bg-rose-100'}`}
+                    >
+                      + Kawasan Baru
+                    </button>
+                  </div>
+
+                  {isAddingNewArea && (
+                    <div className="animate-in slide-in-from-top-2 duration-200">
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder="Nama Kawasan Baru (e.g. Bangi)" 
+                        className="w-full bg-slate-50 border border-airbnb/30 rounded-xl px-4 py-3 font-semibold focus:ring-2 focus:ring-airbnb/20" 
+                        value={newUnit.area} 
+                        onChange={e => setNewUnit({ ...newUnit, area: e.target.value })}
+                        autoFocus
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Priority</label>
+                    <select className="w-full bg-slate-50 border rounded-xl px-4 py-3 font-semibold" value={newUnit.priority} onChange={e => setNewUnit({ ...newUnit, priority: e.target.value })}><option>Normal</option><option>High</option></select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Fee (RM)</label>
+                    <input type="number" required placeholder="45" className="w-full bg-slate-50 border rounded-xl px-4 py-3 font-semibold" value={newUnit.cleaning_fee || ''} onChange={e => setNewUnit({ ...newUnit, cleaning_fee: parseFloat(e.target.value) })} />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">iCal URL (Sync Calendar)</label>
+                  <input type="text" placeholder="https://..." className="w-full bg-slate-50 border rounded-xl px-4 py-3 text-sm" value={newUnit.ical_url} onChange={e => setNewUnit({ ...newUnit, ical_url: e.target.value })} />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => { setShowNewTaskModal(false); setIsAddingNewArea(false); }} className="flex-1 bg-slate-100 py-4 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition-all">Cancel</button>
+                  <button type="submit" disabled={loading} className="flex-1 bg-airbnb text-white py-4 rounded-xl font-bold shadow-lg shadow-airbnb/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50">Add Property</button>
+                </div>
               </form>
             </div>
           </div>
@@ -2721,21 +2771,54 @@ const App = () => {
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-in fade-in zoom-in duration-200">
               <h3 className="text-2xl font-bold mb-6">Manage Unit</h3>
               <form onSubmit={handleUpdateUnit} className="space-y-4">
-                <input type="text" required className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.name} onChange={e => setSelectedUnit({ ...selectedUnit, name: e.target.value })} />
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="relative">
-                    <input 
-                      type="text" 
-                      list="area-list"
-                      required 
-                      className="w-full bg-slate-50 border rounded-xl px-4 py-3" 
-                      value={selectedUnit.area} 
-                      onChange={e => setSelectedUnit({ ...selectedUnit, area: e.target.value })} 
-                    />
+                <input type="text" required className="w-full bg-slate-50 border rounded-xl px-4 py-3 font-semibold" value={selectedUnit.name} onChange={e => setSelectedUnit({ ...selectedUnit, name: e.target.value })} />
+                
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Area / Cluster</label>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {availableAreas.map(area => (
+                      <button
+                        key={area}
+                        type="button"
+                        onClick={() => {
+                          setSelectedUnit({ ...selectedUnit, area });
+                          setIsAddingNewArea(false);
+                        }}
+                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${selectedUnit.area === area && !isAddingNewArea ? 'bg-slate-900 border-slate-900 text-white shadow-lg' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-300'}`}
+                      >
+                        {area}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingNewArea(true);
+                      }}
+                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${isAddingNewArea ? 'bg-airbnb border-airbnb text-white shadow-lg' : 'bg-rose-50 border-rose-100 text-airbnb hover:bg-rose-100'}`}
+                    >
+                      + Kawasan Baru
+                    </button>
                   </div>
-                  <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.priority} onChange={e => setSelectedUnit({ ...selectedUnit, priority: e.target.value })}><option>Normal</option><option>High</option></select>
+
+                  {isAddingNewArea && (
+                    <div className="animate-in slide-in-from-top-2 duration-200">
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder="Nama Kawasan Baru" 
+                        className="w-full bg-slate-50 border border-airbnb/30 rounded-xl px-4 py-3 font-semibold" 
+                        value={selectedUnit.area} 
+                        onChange={e => setSelectedUnit({ ...selectedUnit, area: e.target.value })}
+                        autoFocus
+                      />
+                    </div>
+                  )}
                 </div>
-                <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.status} onChange={e => setSelectedUnit({ ...selectedUnit, status: e.target.value })}><option>Ready</option><option>Cleaning</option><option>Maintenance</option></select>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <select className="w-full bg-slate-50 border rounded-xl px-4 py-3 font-semibold" value={selectedUnit.priority} onChange={e => setSelectedUnit({ ...selectedUnit, priority: e.target.value })}><option>Normal</option><option>High</option></select>
+                  <select className="w-full bg-slate-50 border rounded-xl px-4 py-3 font-semibold" value={selectedUnit.status} onChange={e => setSelectedUnit({ ...selectedUnit, status: e.target.value })}><option>Ready</option><option>Cleaning</option><option>Maintenance</option></select>
+                </div>
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Cleaning Fee (RM)</label>
                   <input type="number" required placeholder="Cleaning Fee (RM)" className="w-full bg-slate-50 border rounded-xl px-4 py-3 font-bold" value={selectedUnit.cleaning_fee || ''} onChange={e => setSelectedUnit({ ...selectedUnit, cleaning_fee: parseFloat(e.target.value) })} />
