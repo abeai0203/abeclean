@@ -3,7 +3,7 @@ import { supabase } from './lib/supabase';
 import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, RotateCw, RotateCcw, Calendar, CheckCircle, Trash2, ShieldCheck, ChevronDown, MessageCircle, Bell, Camera, Banknote, LogOut, Mail, Lock, ArrowLeft } from 'lucide-react';
 
 const App = () => {
-  const [view, setView] = useState('dashboard');
+  const [view, setView] = useState(localStorage.getItem('ops_view') || 'dashboard');
   const [filterArea, setFilterArea] = useState('all');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [properties, setProperties] = useState([]);
@@ -208,6 +208,10 @@ const App = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('ops_view', view);
+  }, [view]);
 
   const fetchData = async (userId = session?.user?.id) => {
     if (!userId) {
