@@ -2153,7 +2153,60 @@ const App = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-col lg:flex-row lg:items-center gap-6 w-full">
+                {/* Pending Notifications Section */}
+                {(() => {
+                  const pendingNotifications = cleaningTasks
+                    .filter(t => t.cleaner_id && !t.notified && t.status !== 'completed')
+                    .map(t => {
+                      const prop = properties.find(p => String(p.id) === String(t.property_id));
+                      const cleaner = cleaners.find(c => c.id === t.cleaner_id);
+                      return { ...t, prop, cleaner };
+                    })
+                    .filter(t => t.prop && t.cleaner && t.cleaner.phone);
+
+                  if (pendingNotifications.length === 0) return null;
+
+                  return (
+                    <div className="mt-8 mb-8 animate-in slide-in-from-top-4 duration-500">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div>
+                        <h3 className="text-sm font-black uppercase tracking-widest text-rose-500">Perlu Dimaklumkan ({pendingNotifications.length})</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {pendingNotifications.map(task => (
+                          <div key={task.id} className="bg-rose-50/50 border border-rose-100 rounded-3xl p-5 flex flex-col gap-4 relative overflow-hidden group">
+                            <div className="absolute -right-4 -top-4 w-24 h-24 bg-rose-100/50 rounded-full blur-2xl group-hover:bg-rose-200/50 transition-colors"></div>
+                            
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-black text-rose-600 bg-rose-100 px-2 py-0.5 rounded-lg">{new Date(task.checkout_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
+                                <span className="text-xs font-bold text-slate-500">{task.prop.name}</span>
+                              </div>
+                              <h4 className="font-black text-slate-900 text-lg leading-tight">{task.cleaner.name}</h4>
+                            </div>
+
+                            <button
+                              onClick={async () => {
+                                const msg = `*TUGASAN BARU*\n\nUnit: ${task.prop.name}\nTarikh: ${new Date(task.checkout_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}\n\nSahkan Selesai apabila siap:\n${window.location.origin}/?task_id=${task.id}`;
+                                const url = `https://wa.me/${task.cleaner.phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`;
+                                window.open(url, '_blank');
+                                
+                                // Mark as notified
+                                await supabase.from('cleaning_tasks').update({ notified: true }).eq('id', task.id);
+                                fetchCleaningTasks();
+                              }}
+                              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all mt-auto"
+                            >
+                              <MessageCircle size={16} /> Hantar WhatsApp
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div className="flex flex-col lg:flex-row lg:items-center gap-6 w-full mt-8">
                   <button 
                     onClick={() => setShowNewTaskModal(true)} 
                     className="w-full lg:w-auto bg-airbnb text-white px-10 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-airbnb/20 transition-all hover:scale-105 active:scale-95 leading-none shrink-0"
