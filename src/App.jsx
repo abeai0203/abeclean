@@ -60,6 +60,7 @@ const App = () => {
   const [tempCategories, setTempCategories] = useState([]);
   const [newCatName, setNewCatName] = useState('');
   const [isAddingCat, setIsAddingCat] = useState(false);
+  const [toasts, setToasts] = useState([]);
 
   // Dynamic Areas derived from properties
   const availableAreas = [...new Set(properties.map(p => p.area).filter(Boolean))].sort();
@@ -108,18 +109,46 @@ const App = () => {
       setLoading(false);
     });
 
-    // 2. Auth State Change Listener
+  }, []);
+
+  // 3. Realtime sub for global updates - Independent and dependent on session
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    console.log('Setting up Realtime listener for userId:', userId);
+    const subscription = supabase
+      .channel(`db-changes-${userId}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'properties',
+        filter: `owner_id=eq.${userId}` 
+      }, () => fetchProperties(userId))
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'cleaning_tasks',
+        filter: `owner_id=eq.${userId}` 
+      }, () => fetchCleaningTasks(userId))
+      .subscribe();
+
+    return () => {
+      console.log('Cleaning up Realtime listener for userId:', userId);
+      supabase.removeChannel(subscription);
+    };
+  }, [session?.user?.id]);
+
+  useEffect(() => {
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       if (session) {
         setIsAdminAuthenticated(true);
-        // If coming from a password reset link
         if (event === 'PASSWORD_RECOVERY') {
           setAuthView('update-password');
           setShowOnboarding(true);
         }
       } else {
-        // Only set authenticated false if we don't have a local bypass
         if (!localStorage.getItem('ops_admin_access')) {
           setIsAdminAuthenticated(false);
           setShowOnboarding(true);
@@ -128,15 +157,7 @@ const App = () => {
       }
     });
 
-    // 3. Realtime sub for global updates
-    const subscription = supabase
-      .channel('schema-db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'properties' }, fetchProperties)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cleaning_tasks' }, fetchCleaningTasks)
-      .subscribe();
-
     return () => {
-      supabase.removeChannel(subscription);
       authSubscription.unsubscribe();
     };
   }, []);
@@ -279,11 +300,34 @@ const App = () => {
 
     if (error) console.error('Error fetching tasks:', error);
     else {
-      setCleaningTasks(data || []);
+      setCleaningTasks(prev => {
+        // Find newly completed tasks to show toast
+        const newlyCompleted = data.filter(newTask => {
+          const oldTask = prev.find(t => t.id === newTask.id);
+          return newTask.completed_at && (!oldTask || !oldTask.completed_at);
+        });
+
+        if (newlyCompleted.length > 0) {
+          newlyCompleted.forEach(task => {
+            const propName = task.properties?.name || 'Rumah';
+            showToast(`Selesai: ${propName}`, 'success');
+          });
+        }
+        return data;
+      });
+
       // Update notifications: tasks completed but not viewed
       const unviewed = (data || []).filter(t => t.completed_at && !t.viewed_at);
       setNotifications(unviewed);
     }
+  };
+
+  const showToast = (message, type = 'info') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
   };
 
   const compressImage = async (file) => {
@@ -3098,6 +3142,22 @@ const App = () => {
           </div>
         </div>
       )}
+      {/* Toasts */}
+      <div className="fixed bottom-8 right-8 z-[200] space-y-3 pointer-events-none">
+        {toasts.map(toast => (
+          <div 
+            key={toast.id} 
+            className={`pointer-events-auto flex items-center gap-3 px-6 py-4 rounded-3xl shadow-2xl border animate-in slide-in-from-right-10 duration-500 ${
+              toast.type === 'success' 
+                ? 'bg-emerald-50 border-emerald-100 text-emerald-600' 
+                : 'bg-white border-slate-100 text-slate-600'
+            }`}
+          >
+            {toast.type === 'success' ? <CheckCircle size={20} /> : <Bell size={20} />}
+            <span className="font-extrabold text-sm">{toast.message}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
