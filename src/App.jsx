@@ -531,7 +531,14 @@ const App = () => {
           checklistItems: checklistItems.map(i => i.item_text)
         }
       });
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Full Function Error:', error);
+        // Catch specific status codes
+        const statusMsg = error.context?.status ? ` (Status: ${error.context.status})` : '';
+        throw new Error(`${error.message}${statusMsg}`);
+      }
+      
       if (data.error) throw new Error(data.error);
       setAiAnalysis(data);
     } catch (err) {
