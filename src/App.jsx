@@ -2633,9 +2633,10 @@ const App = () => {
                   .filter(t => t.status === 'completed')
                   .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
                   .map(task => {
+                    const bubbleDate = task.checkout_date ? new Date(task.checkout_date) : new Date(task.completed_at);
                     const completedDate = new Date(task.completed_at);
-                    const day = completedDate.getDate();
-                    const month = completedDate.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase();
+                    const day = bubbleDate.getDate();
+                    const month = bubbleDate.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase();
                     
                     return (
                       <div key={task.id} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:-translate-y-1 transition-all flex flex-col md:flex-row md:items-center gap-8 overflow-hidden relative group">
