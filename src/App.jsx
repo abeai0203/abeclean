@@ -19,13 +19,10 @@ const App = () => {
   const [onboardingData, setOnboardingData] = useState({
     businessName: '',
     location: 'Shah Alam',
-    propertyName: '',
-    cleaningFee: 45,
-    icalUrl: '',
-    cleanerName: '',
-    cleanerPhone: '',
     email: '',
-    password: ''
+    password: '',
+    properties: [{ name: '', cleaningFee: 45, icalUrl: '' }],
+    cleaners: [{ name: '', phone: '' }]
   });
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [authView, setAuthView] = useState('login'); // 'login', 'onboarding', 'forgot-password', 'update-password'
@@ -462,51 +459,44 @@ const App = () => {
       const ownerId = authData.user.id;
       console.log('User registered with ID:', ownerId);
 
-      // 2. Create Property
-      const { data: propData, error: propError } = await supabase
-        .from('properties')
-        .insert([{
-          name: onboardingData.propertyName || 'My First Home',
-          area: onboardingData.location || 'Shah Alam',
-          cleaning_fee: onboardingData.cleaningFee || 45,
-          ical_url: onboardingData.icalUrl || '',
-          status: 'Ready',
-          priority: 'Normal',
-          owner_id: ownerId
-        }])
-        .select();
-
-      if (propError) {
-        console.error('Property creation error:', propError);
-        throw new Error('Gagal simpan maklumat homestay: ' + propError.message);
+      // 2. Create all Properties
+      const validProps = onboardingData.properties.filter(p => p.name.trim());
+      if (validProps.length > 0) {
+        const { error: propError } = await supabase
+          .from('properties')
+          .insert(validProps.map(p => ({
+            name: p.name.trim(),
+            area: onboardingData.location || 'Shah Alam',
+            cleaning_fee: Number(p.cleaningFee) || 45,
+            ical_url: p.icalUrl || '',
+            status: 'Ready',
+            priority: 'Normal',
+            owner_id: ownerId
+          })));
+        if (propError) throw new Error('Gagal simpan unit: ' + propError.message);
       }
 
-      console.log('Property created:', propData);
-
-      // 3. Create Cleaner if name provided
-      if (onboardingData.cleanerName) {
+      // 3. Create all Cleaners
+      const validCleaners = onboardingData.cleaners.filter(c => c.name.trim());
+      if (validCleaners.length > 0) {
         const { error: cleanerError } = await supabase
           .from('cleaners')
-          .insert([{
-            name: onboardingData.cleanerName,
-            phone: onboardingData.cleanerPhone,
+          .insert(validCleaners.map(c => ({
+            name: c.name.trim(),
+            phone: c.phone,
             role: 'cleaner',
             owner_id: ownerId
-          }]);
-        if (cleanerError) {
-          console.error('Cleaner creation error:', cleanerError);
-        }
+          })));
+        if (cleanerError) console.error('Cleaner creation error:', cleanerError);
       }
 
-      // 4. Explicitly fetch session and set state
+      // 4. Fetch session and set state
       const { data: { session: freshSession } } = await supabase.auth.getSession();
-      
-      // Update states first
       setSession(freshSession);
       setIsAdminAuthenticated(!!freshSession);
       setShowOnboarding(false);
 
-      // 5. Fetch data immediately and await it so we don't return from loading state too early
+      // 5. Fetch all data
       await fetchData(ownerId);
       
     } catch (err) {
@@ -902,59 +892,103 @@ const App = () => {
             )}
 
             {onboardingStep === 2 && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                <h2 className="text-5xl md:text-6xl font-black text-slate-900 leading-[1.1]">Homestay pertama boss?</h2>
-                <p className="text-xl text-slate-500 font-medium">Jangan risau, kita add satu dulu untuk try tengok.</p>
-                <div className="space-y-4">
-                  <input 
-                    autoFocus
-                    type="text" 
-                    placeholder="Nama Unit (e.g. Arte Subang West)"
-                    className="w-full text-lg font-black p-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb focus:ring-4 focus:ring-airbnb/5 outline-none transition-all"
-                    value={onboardingData.propertyName}
-                    onChange={e => setOnboardingData({...onboardingData, propertyName: e.target.value})}
-                  />
-                  <div className="flex items-center gap-4 bg-slate-50 p-6 rounded-3xl border-2 border-slate-100">
-                    <span className="font-black text-slate-400">RM</span>
-                    <input 
-                      type="number" 
-                      placeholder="Upah Cuci"
-                      className="w-full text-lg font-black bg-transparent outline-none"
-                      value={onboardingData.cleaningFee}
-                      onChange={e => setOnboardingData({...onboardingData, cleaningFee: e.target.value})}
-                    />
-                  </div>
-                  <input 
-                    type="text" 
-                    placeholder="Link iCal Airbnb (Optional)"
-                    className="w-full text-lg font-medium p-6 rounded-3xl border-2 border-slate-50 bg-slate-50/50 outline-none focus:border-airbnb transition-all"
-                    value={onboardingData.icalUrl}
-                    onChange={e => setOnboardingData({...onboardingData, icalUrl: e.target.value})}
-                  />
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700 overflow-y-auto max-h-[70vh] pr-1">
+                <div>
+                  <h2 className="text-5xl md:text-6xl font-black text-slate-900 leading-[1.1]">Unit boss?</h2>
+                  <p className="text-xl text-slate-500 font-medium mt-3">Boleh tambah beberapa unit sekaligus. Skip kalau belum ada.</p>
+                </div>
+                <div className="space-y-3">
+                  {onboardingData.properties.map((prop, idx) => (
+                    <div key={idx} className="bg-slate-50 rounded-3xl border border-slate-100 p-5 space-y-3 relative">
+                      {onboardingData.properties.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setOnboardingData(prev => ({ ...prev, properties: prev.properties.filter((_, i) => i !== idx) }))}
+                          className="absolute top-4 right-4 w-8 h-8 rounded-xl bg-rose-50 text-rose-400 flex items-center justify-center hover:bg-rose-100 transition-all"
+                        >
+                          <Plus size={16} className="rotate-45" />
+                        </button>
+                      )}
+                      <input
+                        autoFocus={idx === 0}
+                        type="text"
+                        placeholder={`Nama Unit ${idx + 1} (e.g. B01, ER22-11)`}
+                        className="w-full text-base font-black p-4 rounded-2xl border-2 border-white focus:border-airbnb focus:ring-4 focus:ring-airbnb/5 outline-none transition-all bg-white"
+                        value={prop.name}
+                        onChange={e => setOnboardingData(prev => ({ ...prev, properties: prev.properties.map((p, i) => i === idx ? { ...p, name: e.target.value } : p) }))}
+                      />
+                      <div className="flex items-center gap-3 bg-white rounded-2xl border-2 border-white px-4 py-3">
+                        <span className="font-black text-slate-400 text-sm">RM</span>
+                        <input
+                          type="number"
+                          placeholder="Upah Cuci"
+                          className="w-full font-black text-base bg-transparent outline-none"
+                          value={prop.cleaningFee}
+                          onChange={e => setOnboardingData(prev => ({ ...prev, properties: prev.properties.map((p, i) => i === idx ? { ...p, cleaningFee: e.target.value } : p) }))}
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Link iCal Airbnb (Optional)"
+                        className="w-full text-sm font-medium p-4 rounded-2xl border-2 border-white bg-white/50 outline-none focus:border-airbnb transition-all"
+                        value={prop.icalUrl}
+                        onChange={e => setOnboardingData(prev => ({ ...prev, properties: prev.properties.map((p, i) => i === idx ? { ...p, icalUrl: e.target.value } : p) }))}
+                      />
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setOnboardingData(prev => ({ ...prev, properties: [...prev.properties, { name: '', cleaningFee: 45, icalUrl: '' }] }))}
+                    className="w-full py-4 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400 font-black text-sm uppercase tracking-widest hover:border-airbnb hover:text-airbnb transition-all flex items-center justify-center gap-2"
+                  >
+                    <Plus size={16} /> Tambah Unit
+                  </button>
                 </div>
               </div>
             )}
 
             {onboardingStep === 3 && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                <h2 className="text-5xl md:text-6xl font-black text-slate-900 leading-[1.1]">Sapa yang tukang cuci?</h2>
-                <p className="text-xl text-slate-500 font-medium">Add cleaner boss kat sini. Nanti kita boleh hantar link tugasan kat WhatsApp dorang.</p>
-                <div className="space-y-4">
-                  <input 
-                    autoFocus
-                    type="text" 
-                    placeholder="Nama Cleaner"
-                    className="w-full text-lg font-black p-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb focus:ring-4 focus:ring-airbnb/5 outline-none transition-all text-slate-800"
-                    value={onboardingData.cleanerName}
-                    onChange={e => setOnboardingData({...onboardingData, cleanerName: e.target.value})}
-                  />
-                  <input 
-                    type="text" 
-                    placeholder="No Phone (e.g. 6012...)"
-                    className="w-full text-lg font-black p-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb outline-none transition-all text-slate-800"
-                    value={onboardingData.cleanerPhone}
-                    onChange={e => setOnboardingData({...onboardingData, cleanerPhone: e.target.value})}
-                  />
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700 overflow-y-auto max-h-[70vh] pr-1">
+                <div>
+                  <h2 className="text-5xl md:text-6xl font-black text-slate-900 leading-[1.1]">Sapa yang tukang cuci?</h2>
+                  <p className="text-xl text-slate-500 font-medium mt-3">Tambah cleaner sekarang atau skip kalau belum ada.</p>
+                </div>
+                <div className="space-y-3">
+                  {onboardingData.cleaners.map((cleaner, idx) => (
+                    <div key={idx} className="bg-slate-50 rounded-3xl border border-slate-100 p-5 space-y-3 relative">
+                      {onboardingData.cleaners.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setOnboardingData(prev => ({ ...prev, cleaners: prev.cleaners.filter((_, i) => i !== idx) }))}
+                          className="absolute top-4 right-4 w-8 h-8 rounded-xl bg-rose-50 text-rose-400 flex items-center justify-center hover:bg-rose-100 transition-all"
+                        >
+                          <Plus size={16} className="rotate-45" />
+                        </button>
+                      )}
+                      <input
+                        autoFocus={idx === 0}
+                        type="text"
+                        placeholder={`Nama Cleaner ${idx + 1}`}
+                        className="w-full text-base font-black p-4 rounded-2xl border-2 border-white focus:border-airbnb focus:ring-4 focus:ring-airbnb/5 outline-none transition-all bg-white text-slate-800"
+                        value={cleaner.name}
+                        onChange={e => setOnboardingData(prev => ({ ...prev, cleaners: prev.cleaners.map((c, i) => i === idx ? { ...c, name: e.target.value } : c) }))}
+                      />
+                      <input
+                        type="text"
+                        placeholder="No Phone (e.g. 60123456789)"
+                        className="w-full text-base font-bold p-4 rounded-2xl border-2 border-white bg-white/50 outline-none focus:border-airbnb transition-all text-slate-800"
+                        value={cleaner.phone}
+                        onChange={e => setOnboardingData(prev => ({ ...prev, cleaners: prev.cleaners.map((c, i) => i === idx ? { ...c, phone: e.target.value } : c) }))}
+                      />
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setOnboardingData(prev => ({ ...prev, cleaners: [...prev.cleaners, { name: '', phone: '' }] }))}
+                    className="w-full py-4 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400 font-black text-sm uppercase tracking-widest hover:border-airbnb hover:text-airbnb transition-all flex items-center justify-center gap-2"
+                  >
+                    <Plus size={16} /> Tambah Cleaner
+                  </button>
                 </div>
               </div>
             )}
@@ -974,11 +1008,11 @@ const App = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="font-bold text-slate-400 uppercase text-xs">Unit</span>
-                    <span className="font-black text-slate-900">{onboardingData.propertyName}</span>
+                    <span className="font-black text-slate-900 text-right">{onboardingData.properties.filter(p => p.name).map(p => p.name).join(', ') || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-bold text-slate-400 uppercase text-xs">Cleaner</span>
-                    <span className="font-black text-slate-900">{onboardingData.cleanerName || '-'}</span>
+                    <span className="font-black text-slate-900 text-right">{onboardingData.cleaners.filter(c => c.name).map(c => c.name).join(', ') || '-'}</span>
                   </div>
                 </div>
               </div>
