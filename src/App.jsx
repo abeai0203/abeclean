@@ -852,25 +852,38 @@ const App = () => {
                     onChange={e => setOnboardingData({...onboardingData, businessName: e.target.value})}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="relative group">
-                      <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-airbnb" size={20} />
-                      <input 
-                        type="email" 
-                        placeholder="Email"
-                        className="w-full pl-16 pr-6 py-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb outline-none transition-all font-bold"
-                        value={onboardingData.email}
-                        onChange={e => setOnboardingData({...onboardingData, email: e.target.value})}
-                      />
+                    <div className="space-y-1">
+                      <div className="relative group">
+                        <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-airbnb" size={20} />
+                        <input 
+                          type="email" 
+                          placeholder="Email"
+                          className={`w-full pl-16 pr-6 py-6 rounded-3xl border-2 ${onboardingData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(onboardingData.email) ? 'border-rose-300 focus:border-rose-400' : 'border-slate-100 focus:border-airbnb'} outline-none transition-all font-bold`}
+                          value={onboardingData.email}
+                          onChange={e => setOnboardingData({...onboardingData, email: e.target.value})}
+                        />
+                      </div>
+                      {onboardingData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(onboardingData.email) && (
+                        <p className="text-xs font-bold text-rose-400 px-4">⚠ Format email tidak sah</p>
+                      )}
                     </div>
-                    <div className="relative group">
-                      <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-airbnb" size={20} />
-                      <input 
-                        type="password" 
-                        placeholder="Password"
-                        className="w-full pl-16 pr-6 py-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb outline-none transition-all font-bold"
-                        value={onboardingData.password}
-                        onChange={e => setOnboardingData({...onboardingData, password: e.target.value})}
-                      />
+                    <div className="space-y-1">
+                      <div className="relative group">
+                        <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-airbnb" size={20} />
+                        <input 
+                          type="password" 
+                          placeholder="Password (min. 6 huruf)"
+                          className={`w-full pl-16 pr-6 py-6 rounded-3xl border-2 ${onboardingData.password && onboardingData.password.length < 6 ? 'border-rose-300 focus:border-rose-400' : 'border-slate-100 focus:border-airbnb'} outline-none transition-all font-bold`}
+                          value={onboardingData.password}
+                          onChange={e => setOnboardingData({...onboardingData, password: e.target.value})}
+                        />
+                      </div>
+                      {onboardingData.password && onboardingData.password.length < 6 && (
+                        <p className="text-xs font-bold text-rose-400 px-4">⚠ Password mesti sekurang-kurangnya 6 aksara ({onboardingData.password.length}/6)</p>
+                      )}
+                      {onboardingData.password && onboardingData.password.length >= 6 && (
+                        <p className="text-xs font-bold text-emerald-500 px-4">✓ Password okey!</p>
+                      )}
                     </div>
                   </div>
                   <select 
