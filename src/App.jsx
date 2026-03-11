@@ -988,13 +988,32 @@ const App = () => {
                         value={cleaner.name}
                         onChange={e => setOnboardingData(prev => ({ ...prev, cleaners: prev.cleaners.map((c, i) => i === idx ? { ...c, name: e.target.value } : c) }))}
                       />
-                      <input
-                        type="text"
-                        placeholder="No Phone (e.g. 60123456789)"
-                        className="w-full text-base font-bold p-4 rounded-2xl border-2 border-white bg-white/50 outline-none focus:border-airbnb transition-all text-slate-800"
-                        value={cleaner.phone}
-                        onChange={e => setOnboardingData(prev => ({ ...prev, cleaners: prev.cleaners.map((c, i) => i === idx ? { ...c, phone: e.target.value } : c) }))}
-                      />
+                      <div className="space-y-1">
+                        <div className={`flex items-center rounded-2xl border-2 bg-white/50 overflow-hidden transition-all ${
+                          cleaner.phone && cleaner.phone.replace(/\D/g, '').length < 9 ? 'border-rose-300' :
+                          cleaner.phone && cleaner.phone.replace(/\D/g, '').length >= 9 ? 'border-emerald-300' : 'border-white'
+                        }`}>
+                          <span className="pl-4 pr-2 font-black text-slate-400 text-sm whitespace-nowrap">+60</span>
+                          <span className="text-slate-300 font-bold">|</span>
+                          <input
+                            type="tel"
+                            inputMode="numeric"
+                            placeholder="1X-XXXXXXXX"
+                            className="flex-1 text-base font-bold p-4 bg-transparent outline-none text-slate-800"
+                            value={cleaner.phone.startsWith('60') ? cleaner.phone.slice(2) : cleaner.phone}
+                            onChange={e => {
+                              const digits = e.target.value.replace(/\D/g, '');
+                              setOnboardingData(prev => ({ ...prev, cleaners: prev.cleaners.map((c, i) => i === idx ? { ...c, phone: '60' + digits } : c) }));
+                            }}
+                          />
+                        </div>
+                        {cleaner.phone && cleaner.phone.replace(/\D/g, '').length < 9 && cleaner.phone !== '60' && (
+                          <p className="text-xs font-bold text-rose-400 px-4">⚠ Nombor terlalu pendek</p>
+                        )}
+                        {cleaner.phone && cleaner.phone.replace(/\D/g, '').length >= 11 && (
+                          <p className="text-xs font-bold text-rose-400 px-4">⚠ Nombor terlalu panjang</p>
+                        )}
+                      </div>
                     </div>
                   ))}
                   <button
@@ -3065,7 +3084,38 @@ const App = () => {
                   </div>
                 </div>
                 <input type="text" required placeholder="Name" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={editingCleaner ? editingCleaner.name : newCleaner.name} onChange={e => editingCleaner ? setEditingCleaner({ ...editingCleaner, name: e.target.value }) : setNewCleaner({ ...newCleaner, name: e.target.value })} />
-                <input type="text" placeholder="Phone" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={editingCleaner ? editingCleaner.phone : newCleaner.phone} onChange={e => editingCleaner ? setEditingCleaner({ ...editingCleaner, phone: e.target.value }) : setNewCleaner({ ...newCleaner, phone: e.target.value })} />
+                <div className="space-y-1">
+                  <div className={`flex items-center rounded-xl border bg-slate-50 overflow-hidden transition-all ${
+                    (editingCleaner ? editingCleaner.phone : newCleaner.phone).replace(/\D/g,'').length > 2 &&
+                    (editingCleaner ? editingCleaner.phone : newCleaner.phone).replace(/\D/g,'').length < 11 ? 'border-rose-300' :
+                    (editingCleaner ? editingCleaner.phone : newCleaner.phone).replace(/\D/g,'').length >= 11 ? 'border-emerald-400' : 'border-slate-200'
+                  }`}>
+                    <span className="pl-4 pr-2 font-black text-slate-400 text-sm whitespace-nowrap">+60</span>
+                    <span className="text-slate-300 font-bold">|</span>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      placeholder="1X-XXXXXXXX"
+                      className="flex-1 bg-transparent px-3 py-3 font-bold outline-none"
+                      value={(() => {
+                        const v = editingCleaner ? editingCleaner.phone : newCleaner.phone;
+                        return v.startsWith('60') ? v.slice(2) : v;
+                      })()}
+                      onChange={e => {
+                        const digits = e.target.value.replace(/\D/g, '');
+                        const full = '60' + digits;
+                        editingCleaner ? setEditingCleaner({ ...editingCleaner, phone: full }) : setNewCleaner({ ...newCleaner, phone: full });
+                      }}
+                    />
+                  </div>
+                  {(() => {
+                    const phone = (editingCleaner ? editingCleaner.phone : newCleaner.phone).replace(/\D/g,'');
+                    if (phone.length > 2 && phone.length < 11) return <p className="text-xs font-bold text-rose-400 px-1">⚠ Nombor terlalu pendek</p>;
+                    if (phone.length > 12) return <p className="text-xs font-bold text-rose-400 px-1">⚠ Nombor terlalu panjang</p>;
+                    if (phone.length >= 11) return <p className="text-xs font-bold text-emerald-500 px-1">✓ {phone}</p>;
+                    return null;
+                  })()}
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={editingCleaner ? editingCleaner.role : newCleaner.role} onChange={e => editingCleaner ? setEditingCleaner({ ...editingCleaner, role: e.target.value }) : setNewCleaner({ ...newCleaner, role: e.target.value })}><option value="cleaner">Cleaner</option><option value="head_cleaner">Head Cleaner</option></select>
                   <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={editingCleaner ? (editingCleaner.head_cleaner_id || '') : newCleaner.head_cleaner_id} onChange={e => editingCleaner ? setEditingCleaner({ ...editingCleaner, head_cleaner_id: e.target.value }) : setNewCleaner({ ...newCleaner, head_cleaner_id: e.target.value })}><option value="">None (Admin)</option>{cleaners.filter(c => c.role === 'head_cleaner' && c.id !== editingCleaner?.id).map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}</select>
