@@ -58,6 +58,9 @@ const App = () => {
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
 
+  // Dynamic Areas derived from properties
+  const availableAreas = [...new Set(properties.map(p => p.area).filter(Boolean))].sort();
+
   const [newUnit, setNewUnit] = useState({
     name: '',
     area: 'Shah Alam',
@@ -1766,7 +1769,7 @@ const App = () => {
       {/* Mobile Sidebar */}
       <div className={`fixed inset-0 z-50 md:hidden transition-opacity duration-300 ${sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
         <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-        <aside className={`absolute inset-y-0 left-0 w-64 bg-white shadow-2xl p-6 flex flex-col transition-transform duration-300 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <aside className={`absolute inset-y-0 left-0 w-72 bg-white shadow-2xl p-6 flex flex-col transition-transform duration-300 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
               <Sparkles className="w-8 h-8 text-airbnb" />
@@ -1774,45 +1777,69 @@ const App = () => {
             </div>
             <button onClick={() => setSidebarOpen(false)} className="text-slate-400"><Plus className="rotate-45" size={24} /></button>
           </div>
-          <nav className="space-y-1">
-            <div className="text-[10px] uppercase font-bold text-slate-400 mb-2 px-3 tracking-widest">Main</div>
-            <button onClick={() => { setView('dashboard'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'dashboard' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
-              <LayoutDashboard size={20} /> <span className="font-semibold text-sm">Dashboard</span>
-            </button>
-            <button onClick={() => { setView('calendar'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'calendar' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
-              <Calendar size={20} /> <span className="font-semibold text-sm">Calendar</span>
-            </button>
-            <button onClick={() => { setView('history'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'history' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
-              <Clock size={20} /> <span className="font-semibold text-sm">History</span>
-            </button>
-            <button onClick={() => { setView('payments'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'payments' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
-              <Banknote size={20} /> <span className="font-semibold text-sm">Payments</span>
-            </button>
-            <button
-              onClick={() => { setView('settings'); setSidebarOpen(false); }}
-              className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group ${view === 'settings' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}
-            >
-              <div className={`p-2 rounded-xl transition-all duration-300 ${view === 'settings' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-airbnb shadow-sm'}`}><Sparkles size={18} /></div>
-              Settings
-            </button>
-            <button
+          <nav className="space-y-1 flex-1 overflow-y-auto">
+            <div className="text-[10px] uppercase font-bold text-slate-400 mb-4 px-3 tracking-widest">Main Menu</div>
+            
+            {[
+              { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+              { id: 'calendar', label: 'Calendar', icon: Calendar },
+              { id: 'history', label: 'History', icon: Clock },
+              { id: 'payments', label: 'Payments', icon: Banknote },
+              { id: 'cleaners', label: 'Cleaners', icon: Users }
+            ].map(item => (
+              <button 
+                key={item.id}
+                onClick={() => { setView(item.id); setFilterArea('all'); setSidebarOpen(false); }} 
+                className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group ${view === item.id ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}
+              >
+                <div className={`p-2 rounded-xl transition-all duration-300 ${view === item.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-airbnb shadow-sm'}`}>
+                  <item.icon size={18} />
+                </div>
+                <span className="text-sm">{item.label}</span>
+              </button>
+            ))}
+
+            <button 
               onClick={() => { setShowChecklistSettings(true); setSidebarOpen(false); }}
-              className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group text-slate-500 hover:bg-slate-50`}
+              className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group text-slate-500 hover:bg-slate-50"
             >
-              <div className={`p-2 rounded-xl transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-airbnb shadow-sm`}><CheckCircle size={18} /></div>
-              Checklist
+              <div className="p-2 rounded-xl bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-airbnb shadow-sm transition-all duration-300"><CheckCircle size={18} /></div>
+              <span className="text-sm">Checklist</span>
             </button>
-            <button onClick={() => { setView('cleaners'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'cleaners' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
-              <Users size={20} /> <span className="font-semibold text-sm">Cleaners</span>
-            </button>
+
+            {availableAreas.length > 0 && (
+              <div className="pt-8 pb-4 px-3">
+                <div className="text-[10px] uppercase font-bold text-slate-400 mb-4 tracking-widest">Areas</div>
+                <div className="flex flex-wrap gap-2">
+                  <button 
+                    onClick={() => { setFilterArea('all'); setView('dashboard'); setSidebarOpen(false); }}
+                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${filterArea === 'all' && view === 'dashboard' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                  >
+                    All
+                  </button>
+                  {availableAreas.map(area => (
+                    <button 
+                      key={area}
+                      onClick={() => { setFilterArea(area); setView('dashboard'); setSidebarOpen(false); }}
+                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${filterArea === area && view === 'dashboard' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                    >
+                      {area}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </nav>
 
           <div className="mt-auto pt-6 border-t border-slate-50">
             <button 
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-4 rounded-2xl text-rose-500 hover:bg-rose-50 transition-all font-bold"
+              className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group text-rose-500 hover:bg-rose-50"
             >
-              <LogOut size={20} /> <span className="text-sm">Log Out</span>
+              <div className="p-2 rounded-xl bg-rose-50 text-rose-500 group-hover:bg-white shadow-sm transition-all duration-300">
+                <LogOut size={18} />
+              </div>
+              Log Out
             </button>
           </div>
         </aside>
@@ -1853,10 +1880,19 @@ const App = () => {
           
           <div className="pt-8 mb-4">
              <div className="text-[10px] uppercase font-bold text-slate-400 mb-4 px-3 tracking-widest">Areas</div>
-             <div className="space-y-1">
-                {['Shah Alam', 'Puchong'].map(area => (
-                  <button key={area} onClick={() => { setFilterArea(area); setView('dashboard'); }} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group ${filterArea === area && view === 'dashboard' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}>
-                    <div className={`p-2 rounded-xl transition-all duration-300 ${filterArea === area && view === 'dashboard' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-airbnb shadow-sm'}`}><MapPin size={18} /></div>
+             <div className="px-3 flex flex-wrap gap-2">
+                <button 
+                  onClick={() => { setFilterArea('all'); setView('dashboard'); }}
+                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${filterArea === 'all' && view === 'dashboard' ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+                >
+                  All
+                </button>
+                {availableAreas.map(area => (
+                  <button 
+                    key={area} 
+                    onClick={() => { setFilterArea(area); setView('dashboard'); }} 
+                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${filterArea === area && view === 'dashboard' ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+                  >
                     {area}
                   </button>
                 ))}
@@ -2655,7 +2691,20 @@ const App = () => {
               <form onSubmit={handleAddUnit} className="space-y-4">
                 <input type="text" required placeholder="Unit Name" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={newUnit.name} onChange={e => setNewUnit({ ...newUnit, name: e.target.value })} />
                 <div className="grid grid-cols-2 gap-4">
-                  <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={newUnit.area} onChange={e => setNewUnit({ ...newUnit, area: e.target.value })}><option>Shah Alam</option><option>Puchong</option></select>
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      list="area-list"
+                      required 
+                      placeholder="Area (e.g. Shah Alam)" 
+                      className="w-full bg-slate-50 border rounded-xl px-4 py-3" 
+                      value={newUnit.area} 
+                      onChange={e => setNewUnit({ ...newUnit, area: e.target.value })} 
+                    />
+                    <datalist id="area-list">
+                      {availableAreas.map(a => <option key={a} value={a} />)}
+                    </datalist>
+                  </div>
                   <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={newUnit.priority} onChange={e => setNewUnit({ ...newUnit, priority: e.target.value })}><option>Normal</option><option>High</option></select>
                 </div>
                 <input type="text" placeholder="iCal URL" className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={newUnit.ical_url} onChange={e => setNewUnit({ ...newUnit, ical_url: e.target.value })} />
@@ -2674,7 +2723,16 @@ const App = () => {
               <form onSubmit={handleUpdateUnit} className="space-y-4">
                 <input type="text" required className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.name} onChange={e => setSelectedUnit({ ...selectedUnit, name: e.target.value })} />
                 <div className="grid grid-cols-2 gap-4">
-                  <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.area} onChange={e => setSelectedUnit({ ...selectedUnit, area: e.target.value })}><option>Shah Alam</option><option>Puchong</option></select>
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      list="area-list"
+                      required 
+                      className="w-full bg-slate-50 border rounded-xl px-4 py-3" 
+                      value={selectedUnit.area} 
+                      onChange={e => setSelectedUnit({ ...selectedUnit, area: e.target.value })} 
+                    />
+                  </div>
                   <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.priority} onChange={e => setSelectedUnit({ ...selectedUnit, priority: e.target.value })}><option>Normal</option><option>High</option></select>
                 </div>
                 <select className="w-full bg-slate-50 border rounded-xl px-4 py-3" value={selectedUnit.status} onChange={e => setSelectedUnit({ ...selectedUnit, status: e.target.value })}><option>Ready</option><option>Cleaning</option><option>Maintenance</option></select>
