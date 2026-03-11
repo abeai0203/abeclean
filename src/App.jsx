@@ -37,6 +37,8 @@ const App = () => {
 
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [calendarMode, setCalendarMode] = useState('list'); // 'list' or 'grid'
+  const [showManualDateModal, setShowManualDateModal] = useState(false);
+  const [manualDateForm, setManualDateForm] = useState({ propertyId: '', startDate: '', endDate: '' });
 
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
@@ -2465,6 +2467,15 @@ const App = () => {
                     </div>
                   )}
                   <button
+                    onClick={() => {
+                      setManualDateForm({ propertyId: properties[0]?.id || '', startDate: '', endDate: '' });
+                      setShowManualDateModal(true);
+                    }}
+                    className="w-full md:w-auto bg-airbnb text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-airbnb/90 transition-all shadow-lg shadow-airbnb/20 active:scale-95"
+                  >
+                    <Plus size={18} /> Tambah Tarikh
+                  </button>
+                  <button
                     onClick={async () => {
                       setLoading(true);
                       for (const p of properties) if (p.ical_url) await syncAirbnb(p);
@@ -3065,6 +3076,80 @@ const App = () => {
           </div>
         )
       }
+
+      {showManualDateModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowManualDateModal(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative flex flex-col gap-5" onClick={e => e.stopPropagation()}>
+            <div>
+              <h3 className="text-2xl font-black text-slate-900">Tambah Tarikh Manual</h3>
+              <p className="text-sm text-slate-400 font-medium mt-1">Tambah tarikh checkout tanpa perlu sync iCal.</p>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2 block">Unit</label>
+                <select
+                  className="w-full p-4 rounded-2xl border-2 border-slate-100 focus:border-airbnb outline-none font-bold text-slate-800 bg-slate-50"
+                  value={manualDateForm.propertyId}
+                  onChange={e => setManualDateForm({ ...manualDateForm, propertyId: e.target.value })}
+                >
+                  {properties.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2 block">Tarikh Check-in</label>
+                  <input
+                    type="date"
+                    className="w-full p-4 rounded-2xl border-2 border-slate-100 focus:border-airbnb outline-none font-bold text-slate-800"
+                    value={manualDateForm.startDate}
+                    onChange={e => setManualDateForm({ ...manualDateForm, startDate: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2 block">Tarikh Check-out</label>
+                  <input
+                    type="date"
+                    className="w-full p-4 rounded-2xl border-2 border-slate-100 focus:border-airbnb outline-none font-bold text-slate-800"
+                    value={manualDateForm.endDate}
+                    onChange={e => setManualDateForm({ ...manualDateForm, endDate: e.target.value })}
+                    min={manualDateForm.startDate || undefined}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-2">
+              <button
+                onClick={() => setShowManualDateModal(false)}
+                className="flex-1 py-4 rounded-2xl border-2 border-slate-100 text-slate-500 font-bold hover:bg-slate-50 transition-all"
+              >
+                Batal
+              </button>
+              <button
+                disabled={!manualDateForm.propertyId || !manualDateForm.endDate}
+                onClick={async () => {
+                  const prop = properties.find(p => String(p.id) === String(manualDateForm.propertyId));
+                  if (!prop) return;
+                  const newBooking = {
+                    start: manualDateForm.startDate ? new Date(manualDateForm.startDate).toISOString() : new Date(manualDateForm.endDate).toISOString(),
+                    end: new Date(manualDateForm.endDate).toISOString(),
+                    summary: 'Manual Entry'
+                  };
+                  const updatedBookings = [...(prop.bookings || []), newBooking];
+                  const { error } = await supabase.from('properties').update({ bookings: updatedBookings }).eq('id', prop.id);
+                  if (error) { alert('Gagal simpan: ' + error.message); return; }
+                  await fetchProperties();
+                  setShowManualDateModal(false);
+                }}
+                className="flex-1 py-4 rounded-2xl bg-airbnb text-white font-black hover:bg-airbnb/90 transition-all disabled:opacity-30 shadow-lg shadow-airbnb/20 active:scale-95"
+              >
+                Simpan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {
         showAssignModal && (
