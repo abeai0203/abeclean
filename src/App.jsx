@@ -78,6 +78,15 @@ const App = () => {
   });
 
   useEffect(() => {
+    if (reviewTask) {
+      setAiAnalysis(reviewTask.ai_analysis || null);
+    } else {
+      setAiAnalysis(null);
+      setAiLoading(false);
+    }
+  }, [reviewTask]);
+
+  useEffect(() => {
     // 1. Initial Session Check
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
@@ -534,13 +543,25 @@ const App = () => {
       
       if (error) {
         console.error('Full Function Error:', error);
-        // Catch specific status codes
         const statusMsg = error.context?.status ? ` (Status: ${error.context.status})` : '';
         throw new Error(`${error.message}${statusMsg}`);
       }
       
       if (data.error) throw new Error(data.error);
+
+      // Save to Database
+      const { error: updateError } = await supabase
+        .from('cleaning_tasks')
+        .update({ ai_analysis: data })
+        .eq('id', task.id);
+        
+      if (updateError) console.error('Gagal simpan AI result:', updateError);
+
       setAiAnalysis(data);
+      // Update local state so it persists in the list
+      setCleaningTasks(prev => prev.map(t => t.id === task.id ? { ...t, ai_analysis: data } : t));
+      setReviewTask(prev => prev && prev.id === task.id ? { ...prev, ai_analysis: data } : prev);
+
     } catch (err) {
       alert('AI Error: ' + err.message);
     } finally {
@@ -1204,7 +1225,8 @@ const App = () => {
           checklist_responses: null,
           proof_images: [],
           completed_at: null,
-          viewed_at: null
+          viewed_at: null,
+          ai_analysis: null
         })
         .eq('id', taskId);
       if (error) throw error;
