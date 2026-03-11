@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
-import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, RotateCw, RotateCcw, Calendar, CheckCircle, Trash2, ShieldCheck, ChevronDown, MessageCircle, Bell, Camera, Banknote, LogOut, Mail, Lock } from 'lucide-react';
+import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, RotateCw, RotateCcw, Calendar, CheckCircle, Trash2, ShieldCheck, ChevronDown, MessageCircle, Bell, Camera, Banknote, LogOut, Mail, Lock, ArrowLeft } from 'lucide-react';
 
 const App = () => {
   const [view, setView] = useState('dashboard');
@@ -28,7 +28,9 @@ const App = () => {
     password: ''
   });
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
-  const [authView, setAuthView] = useState('login'); // 'login' or 'onboarding'
+  const [authView, setAuthView] = useState('login'); // 'login', 'onboarding', 'forgot-password', 'update-password'
+  const [resetEmail, setResetEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
 
   // Modals state
   const [showNewTaskModal, setShowNewTaskModal] = useState(false);
@@ -79,19 +81,30 @@ const App = () => {
       setSession(currentSession);
       if (currentSession) {
         setIsAdminAuthenticated(true);
+      } else {
+        // If no session, show the login flow
+        setShowOnboarding(true);
+        setAuthView('login');
       }
       setLoading(false);
     });
 
     // 2. Auth State Change Listener
-    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       if (session) {
         setIsAdminAuthenticated(true);
+        // If coming from a password reset link
+        if (event === 'PASSWORD_RECOVERY') {
+          setAuthView('update-password');
+          setShowOnboarding(true);
+        }
       } else {
         // Only set authenticated false if we don't have a local bypass
         if (!localStorage.getItem('ops_admin_access')) {
           setIsAdminAuthenticated(false);
+          setShowOnboarding(true);
+          setAuthView('login');
         }
       }
     });
@@ -467,6 +480,41 @@ const App = () => {
     setAuthView('login');
   };
 
+  const handleForgotPassword = async (e) => {
+    if (e) e.preventDefault();
+    if (!resetEmail) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: window.location.origin
+      });
+      if (error) throw error;
+      alert('Pautan reset kata laluan telah dihantar ke email anda. Sila semak inbox (dan folder spam).');
+      setAuthView('login');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e) => {
+    if (e) e.preventDefault();
+    if (!newPassword) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      alert('Kata laluan berjaya dikemaskini! Anda kini boleh masuk ke dashboard.');
+      setAuthView('login');
+      setShowOnboarding(false);
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderLoginView = () => {
     return (
       <div className="fixed inset-0 bg-white z-[200] flex flex-col font-sans overflow-hidden text-slate-900">
@@ -509,9 +557,16 @@ const App = () => {
                   </div>
                 </div>
                 <button 
+                  type="button"
+                  onClick={() => setAuthView('forgot-password')}
+                  className="text-sm font-black text-rose-500 hover:text-airbnb transition-colors text-right w-full mt-2"
+                >
+                  Forgot Password?
+                </button>
+                <button 
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-slate-900 text-white py-6 rounded-3xl font-black text-lg shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                  className="w-full bg-slate-900 text-white py-6 rounded-3xl font-black text-lg shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 mt-4"
                 >
                   {loading ? 'Logging in...' : 'Login Now'}
                 </button>
@@ -538,6 +593,110 @@ const App = () => {
                    </div>
                    <h3 className="text-3xl font-black text-slate-900 mb-4">Secure & Private.</h3>
                    <p className="text-slate-500 font-medium">Your data is yours alone. Protected by industry-standard encryption.</p>
+                </div>
+             </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderForgotPasswordView = () => {
+    return (
+      <div className="fixed inset-0 bg-white z-[200] flex flex-col font-sans overflow-hidden text-slate-900">
+        <div className="flex-1 flex flex-col md:flex-row h-full overflow-hidden">
+          <div className="flex-1 p-8 md:p-20 flex flex-col justify-center max-w-xl mx-auto w-full">
+            <button 
+              onClick={() => setAuthView('login')}
+              className="flex items-center gap-2 text-slate-400 font-bold mb-12 hover:text-airbnb transition-colors"
+            >
+              <ArrowLeft size={20} /> Kembali ke Login
+            </button>
+
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+              <h2 className="text-5xl font-black text-slate-900 leading-tight">Forgot Password?</h2>
+              <p className="text-xl text-slate-500 font-medium">Jangan risau boss, masukkan email boss kat bawah ni.</p>
+
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="relative group">
+                  <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-airbnb transition-colors" size={20} />
+                  <input 
+                    type="email" 
+                    placeholder="Email address"
+                    required
+                    className="w-full pl-16 pr-6 py-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb focus:ring-4 focus:ring-airbnb/5 outline-none transition-all font-bold"
+                    value={resetEmail}
+                    onChange={e => setResetEmail(e.target.value)}
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-slate-900 text-white py-6 rounded-3xl font-black text-lg shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  {loading ? 'Sila tunggu...' : 'Hantar Pautan Reset'}
+                </button>
+              </form>
+            </div>
+          </div>
+          <div className="hidden md:flex flex-1 bg-slate-50 items-center justify-center p-20 relative overflow-hidden">
+             <div className="absolute inset-0 bg-gradient-to-br from-airbnb/5 to-transparent"></div>
+             <div className="relative z-10 w-full max-w-lg aspect-square bg-white rounded-[4rem] shadow-2xl border border-slate-100 flex items-center justify-center p-12">
+                <div className="text-center">
+                   <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-rose-100">
+                     <Mail size={40} />
+                   </div>
+                   <h3 className="text-3xl font-black text-slate-900 mb-4">Check your inbox.</h3>
+                   <p className="text-slate-500 font-medium">Kami hantar link khas untuk boss tukar password baru.</p>
+                </div>
+             </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderUpdatePasswordView = () => {
+    return (
+      <div className="fixed inset-0 bg-white z-[200] flex flex-col font-sans overflow-hidden text-slate-900">
+        <div className="flex-1 flex flex-col md:flex-row h-full overflow-hidden">
+          <div className="flex-1 p-8 md:p-20 flex flex-col justify-center max-w-xl mx-auto w-full">
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+              <h2 className="text-5xl font-black text-slate-900 leading-tight">New Password.</h2>
+              <p className="text-xl text-slate-500 font-medium">Sila masukkan kata laluan baru yang kuat ya boss!</p>
+
+              <form onSubmit={handleUpdatePassword} className="space-y-4">
+                <div className="relative group">
+                  <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-airbnb transition-colors" size={20} />
+                  <input 
+                    type="password" 
+                    placeholder="Enter new password"
+                    required
+                    minLength={6}
+                    className="w-full pl-16 pr-6 py-6 rounded-3xl border-2 border-slate-100 focus:border-airbnb focus:ring-4 focus:ring-airbnb/5 outline-none transition-all font-bold"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-airbnb text-white py-6 rounded-3xl font-black text-lg shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  {loading ? 'Sedang simpan...' : 'Kemaskini Kata Laluan'}
+                </button>
+              </form>
+            </div>
+          </div>
+          <div className="hidden md:flex flex-1 bg-slate-50 items-center justify-center p-20 relative overflow-hidden">
+             <div className="absolute inset-0 bg-gradient-to-br from-airbnb/5 to-transparent"></div>
+             <div className="relative z-10 w-full max-w-lg aspect-square bg-white rounded-[4rem] shadow-2xl border border-slate-100 flex items-center justify-center p-12">
+                <div className="text-center">
+                   <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-emerald-100">
+                     <ShieldCheck size={40} />
+                   </div>
+                   <h3 className="text-3xl font-black text-slate-900 mb-4">You're secure.</h3>
+                   <p className="text-slate-500 font-medium">Once updated, you can access your dashboard safely.</p>
                 </div>
              </div>
           </div>
@@ -1025,6 +1184,29 @@ const App = () => {
     }
   }
 
+  const renderLoadingOverlay = () => {
+    if (!loading) return null;
+    return (
+      <div className="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-white/70 backdrop-blur-md animate-in fade-in duration-500">
+        <div className="relative mb-8">
+          <div className="w-24 h-24 border-4 border-airbnb/10 border-t-airbnb rounded-full animate-spin"></div>
+          <Sparkles className="absolute inset-0 m-auto w-8 h-8 text-airbnb animate-pulse" />
+        </div>
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Tunggu sebentar...</h2>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest px-8">
+            Kami sedang menyediakan dashboard boss 🚀🌕
+          </p>
+        </div>
+        <div className="mt-12 flex gap-1">
+          <div className="w-1.5 h-1.5 bg-airbnb rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+          <div className="w-1.5 h-1.5 bg-airbnb rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+          <div className="w-1.5 h-1.5 bg-airbnb rounded-full animate-bounce"></div>
+        </div>
+      </div>
+    );
+  };
+
   const handleMarkAsPaid = async (taskId) => {
     try {
       const { error } = await supabase
@@ -1288,11 +1470,15 @@ const App = () => {
   }
 
   if (showOnboarding && !isAdminAuthenticated) {
-    return authView === 'login' ? renderLoginView() : renderOnboardingView();
+    if (authView === 'login') return renderLoginView();
+    if (authView === 'onboarding') return renderOnboardingView();
+    if (authView === 'forgot-password') return renderForgotPasswordView();
+    if (authView === 'update-password') return renderUpdatePasswordView();
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+    <div className="min-h-screen bg-slate-50 relative overflow-hidden text-slate-900 font-sans">
+      {renderLoadingOverlay()}
 
       {/* Checklist Review Modal */}
       {reviewTask && (
