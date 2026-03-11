@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
-import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, RotateCw, RotateCcw, Calendar, CheckCircle, Trash2, ShieldCheck, ChevronDown, MessageCircle, Bell, Camera, Banknote, LogOut, Mail, Lock, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Home, Users, MapPin, Plus, Clock, User, Star, Sparkles, Menu, RotateCw, RotateCcw, Calendar, CheckCircle, Trash2, ShieldCheck, ChevronDown, MessageCircle, Bell, Camera, Banknote, LogOut, Mail, Lock, ArrowLeft, Check } from 'lucide-react';
 
 const App = () => {
   const [view, setView] = useState(localStorage.getItem('ops_view') || 'dashboard');
@@ -3204,13 +3204,24 @@ const App = () => {
                 {selectedUnit?.name || 'Unit'} - {selectedBooking?.end ? new Date(selectedBooking.end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'Date'}
               </p>
               <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
-                {cleaners.map(c => (
+                {cleaners.map(c => {
+                  let isAssigned = false;
+                  if (selectedBooking) {
+                    const checkoutDate = new Date(selectedBooking.end).toISOString().split('T')[0];
+                    const currentTask = cleaningTasks.find(t => 
+                      String(t.property_id) === String(selectedBooking.propertyId) &&
+                      t.checkout_date === checkoutDate
+                    );
+                    isAssigned = currentTask?.cleaner_id === c.id;
+                  }
+
+                  return (
                   <button
                     key={c.id}
-                    onClick={() => handleAssignCleaner(c.id)}
-                    className="w-full flex items-center gap-4 p-4 border rounded-3xl hover:bg-airbnb/5 hover:border-airbnb transition-all text-left group/row"
+                    onClick={() => !isAssigned && handleAssignCleaner(c.id)}
+                    className={`w-full flex items-center gap-4 p-4 border rounded-3xl transition-all text-left ${isAssigned ? 'border-emerald-500 bg-emerald-50/50 cursor-default shadow-sm' : 'hover:bg-airbnb/5 hover:border-airbnb group/row'}`}
                   >
-                    <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 overflow-hidden border-2 border-white shadow-sm transition-transform group-hover/row:scale-110">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center overflow-hidden border-2 shadow-sm transition-transform ${isAssigned ? 'bg-emerald-100 text-emerald-500 border-emerald-200' : 'bg-slate-50 text-slate-300 border-white group-hover/row:scale-110'}`}>
                       {c.avatar_url ? (
                         <img src={c.avatar_url} className="w-full h-full object-cover" />
                       ) : (
@@ -3218,14 +3229,14 @@ const App = () => {
                       )}
                     </div>
                     <div className="flex-1">
-                      <span className="block font-black text-slate-700 text-base">{c.name}</span>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.1em]">{c.role.replace('_', ' ')}</span>
+                      <span className={`block font-black text-base ${isAssigned ? 'text-emerald-700' : 'text-slate-700'}`}>{c.name}</span>
+                      <span className={`text-[10px] uppercase font-bold tracking-[0.1em] ${isAssigned ? 'text-emerald-600' : 'text-slate-400'}`}>{isAssigned ? 'Currently Assigned' : c.role.replace('_', ' ')}</span>
                     </div>
-                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-200 group-hover/row:bg-airbnb group-hover/row:text-white transition-all">
-                      <Plus size={16} />
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isAssigned ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' : 'bg-slate-50 text-slate-200 group-hover/row:bg-airbnb group-hover/row:text-white'}`}>
+                      {isAssigned ? <Check size={16} strokeWidth={4} /> : <Plus size={16} />}
                     </div>
                   </button>
-                ))}
+                )})}
                 {cleaners.length === 0 && (
                   <div className="text-center py-8">
                     <p className="text-slate-500 italic mb-4">No cleaners available.</p>
