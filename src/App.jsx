@@ -2167,22 +2167,30 @@ const App = () => {
                   if (pendingNotifications.length === 0) return null;
 
                   return (
-                    <div className="mt-8 mb-8 animate-in slide-in-from-top-4 duration-500">
+                    <div className="mb-10 animate-in slide-in-from-top-4 duration-500">
                       <div className="flex items-center gap-2 mb-4">
                         <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div>
-                        <h3 className="text-sm font-black uppercase tracking-widest text-rose-500">Perlu Dimaklumkan ({pendingNotifications.length})</h3>
+                        <h3 className="text-xs font-black uppercase tracking-widest text-rose-500">Perlu Dimaklumkan ({pendingNotifications.length})</h3>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="flex flex-col gap-2">
                         {pendingNotifications.map(task => (
-                          <div key={task.id} className="bg-rose-50/50 border border-rose-100 rounded-3xl p-5 flex flex-col gap-4 relative overflow-hidden group">
-                            <div className="absolute -right-4 -top-4 w-24 h-24 bg-rose-100/50 rounded-full blur-2xl group-hover:bg-rose-200/50 transition-colors"></div>
-                            
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs font-black text-rose-600 bg-rose-100 px-2 py-0.5 rounded-lg">{new Date(task.checkout_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
-                                <span className="text-xs font-bold text-slate-500">{task.prop.name}</span>
+                          <div key={task.id} className="bg-rose-50/50 border border-rose-100/50 hover:border-rose-200 rounded-2xl p-3 flex flex-row items-center justify-between gap-4 transition-all pr-4">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-rose-400 shadow-sm border border-rose-50 shrink-0">
+                                {task.cleaner.avatar_url ? (
+                                  <img src={task.cleaner.avatar_url} className="w-full h-full rounded-full object-cover" />
+                                ) : (
+                                  <User size={18} />
+                                )}
                               </div>
-                              <h4 className="font-black text-slate-900 text-lg leading-tight">{task.cleaner.name}</h4>
+                              <div>
+                                <h4 className="font-black text-slate-800 text-sm leading-none mb-1">{task.cleaner.name}</h4>
+                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500">
+                                  <span>{task.prop.name}</span>
+                                  <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
+                                  <span className="text-rose-500">{new Date(task.checkout_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
+                                </div>
+                              </div>
                             </div>
 
                             <button
@@ -2192,12 +2200,17 @@ const App = () => {
                                 window.open(url, '_blank');
                                 
                                 // Mark as notified
-                                await supabase.from('cleaning_tasks').update({ notified: true }).eq('id', task.id);
-                                fetchCleaningTasks();
+                                const { error } = await supabase.from('cleaning_tasks').update({ notified: true }).eq('id', task.id);
+                                if (error) {
+                                  alert('Gagal update sistem. Pastikan database column wujud: ' + error.message);
+                                  console.error(error);
+                                } else {
+                                  fetchCleaningTasks();
+                                }
                               }}
-                              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all mt-auto"
+                              className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider flex items-center gap-2 shadow-sm active:scale-95 transition-all shrink-0"
                             >
-                              <MessageCircle size={16} /> Hantar WhatsApp
+                              <MessageCircle size={14} /> Send
                             </button>
                           </div>
                         ))}
