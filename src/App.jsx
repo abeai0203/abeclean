@@ -1056,7 +1056,7 @@ const App = () => {
 
   const loadCleanerTask = async (taskId) => {
     try {
-      // First get the task
+      // Fetch task first to get owner_id
       const { data: task, error: taskError } = await supabase
         .from('cleaning_tasks')
         .select('*')
@@ -1065,11 +1065,24 @@ const App = () => {
 
       if (taskError) throw taskError;
 
-      // Then get cleaner and property details separately for maximum reliability
-      const [cleanerRes, propertyRes] = await Promise.all([
+      // Fetch cleaner, property AND checklist items all in parallel
+      const [cleanerRes, propertyRes, checklistRes] = await Promise.all([
         supabase.from('cleaners').select('name, phone').eq('id', task.cleaner_id).single(),
-        supabase.from('properties').select('*').eq('id', task.property_id).single()
+        supabase.from('properties').select('*').eq('id', task.property_id).single(),
+        supabase.from('checklist_items').select('*').eq('owner_id', task.owner_id).order('category', { ascending: false })
       ]);
+
+      // Deduplicate checklist items
+      if (checklistRes.data && checklistRes.data.length > 0) {
+        const seen = new Set();
+        const unique = checklistRes.data.filter(item => {
+          const key = `${item.category}__${item.item_text}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setChecklistItems(unique);
+      }
 
       setActiveCleanerTask({
         ...task,
