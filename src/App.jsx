@@ -635,7 +635,7 @@ const App = () => {
           <div className="flex-1 p-8 md:p-20 flex flex-col justify-center max-w-xl mx-auto w-full">
             <div className="flex items-center gap-3 mb-12">
               <Sparkles className="w-10 h-10 text-airbnb" />
-              <h1 className="text-2xl font-black tracking-tight">OPS AIRBNB</h1>
+              <h1 className="text-2xl font-black tracking-tight">BIBIK AIRBNB</h1>
             </div>
 
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
@@ -699,12 +699,10 @@ const App = () => {
           
           <div className="hidden md:flex flex-1 bg-slate-50 items-center justify-center p-20 relative overflow-hidden">
              <div className="absolute inset-0 bg-gradient-to-br from-airbnb/5 to-transparent"></div>
-             <div className="relative z-10 w-full max-w-lg aspect-square bg-white rounded-[4rem] shadow-2xl border border-slate-100 flex items-center justify-center p-12">
+             <div className="relative z-10 w-full max-w-lg aspect-square bg-white rounded-[4rem] shadow-2xl border border-slate-100 flex flex-col items-center justify-center p-12">
+                <img src="/bibik.png" alt="Bibik Airbnb" className="w-64 h-64 object-contain mb-8 hover:scale-105 transition-transform duration-500" />
                 <div className="text-center">
-                   <div className="w-20 h-20 bg-airbnb text-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-airbnb/30">
-                     <ShieldCheck size={40} />
-                   </div>
-                   <h3 className="text-3xl font-black text-slate-900 mb-4">Secure & Private.</h3>
+                   <h3 className="text-3xl font-black text-slate-900 mb-2">Manage your bibik easily!</h3>
                    <p className="text-slate-500 font-medium">Your data is yours alone. Protected by industry-standard encryption.</p>
                 </div>
              </div>
@@ -837,12 +835,12 @@ const App = () => {
           <div className="flex-1 p-8 md:p-20 flex flex-col justify-center max-w-2xl mx-auto w-full">
             <div className="flex items-center gap-3 mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
               <Sparkles className="w-10 h-10 text-airbnb" />
-              <h1 className="text-2xl font-black tracking-tight">OPS AIRBNB</h1>
+              <h1 className="text-2xl font-black tracking-tight">BIBIK AIRBNB</h1>
             </div>
 
             {onboardingStep === 1 && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 text-slate-900">
-                <h2 className="text-5xl md:text-6xl font-black text-slate-900 leading-[1.1]">Selamat Datang ke OPS AIRBNB.</h2>
+                <h2 className="text-5xl md:text-6xl font-black text-slate-900 leading-[1.1]">Selamat Datang ke BIBIK AIRBNB.</h2>
                 <p className="text-xl text-slate-500 font-medium font-sans">Jom register account untuk bisnes boss.</p>
                 <div className="space-y-4">
                   <input 
@@ -1056,21 +1054,17 @@ const App = () => {
           {/* Right Visual (Hidden on mobile) */}
           <div className="hidden md:flex flex-1 bg-slate-50 items-center justify-center p-20 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-airbnb/5 to-transparent"></div>
-            <div className="relative z-10 w-full max-w-lg aspect-square bg-white rounded-[4rem] shadow-2xl border border-slate-100 flex items-center justify-center p-12 overflow-hidden group">
+            <div className="relative z-10 w-full max-w-lg aspect-square bg-white rounded-[4rem] shadow-2xl border border-slate-100 flex flex-col items-center justify-center p-12 overflow-hidden group">
                <div className="absolute top-0 right-0 w-64 h-64 bg-airbnb/5 rounded-bl-[10rem] group-hover:scale-110 transition-transform duration-1000"></div>
-               <div className="relative text-center">
-                  <div className="w-20 h-20 bg-airbnb text-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-airbnb/30">
-                    {onboardingStep === 1 && <Sparkles size={40} />}
-                    {onboardingStep === 2 && <Home size={40} />}
-                    {onboardingStep === 3 && <Users size={40} />}
-                    {onboardingStep === 4 && <ShieldCheck size={40} />}
-                  </div>
-                  <h3 className="text-3xl font-black text-slate-900 mb-4">
+               <img src="/bibik.png" alt="Bibik Airbnb" className="w-48 h-48 object-contain mb-8 z-10 hover:scale-105 transition-transform duration-500" />
+               <div className="relative text-center z-10">
+                  <h3 className="text-2xl font-black text-slate-900 mb-2">Manage your bibik easily!</h3>
+                  <p className="text-slate-500 font-medium mb-6">
                     {onboardingStep === 1 && "The Beginning."}
                     {onboardingStep === 2 && "Setup is Key."}
                     {onboardingStep === 3 && "Build your Team."}
                     {onboardingStep === 4 && "Great Start!"}
-                  </h3>
+                  </p>
                   <div className="flex justify-center gap-1">
                     {[1,2,3,4].map(s => (
                       <div key={s} className={`h-1 rounded-full transition-all duration-500 ${s <= onboardingStep ? 'w-8 bg-airbnb' : 'w-2 bg-slate-100'}`}></div>
@@ -1995,7 +1989,7 @@ const App = () => {
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
               <Sparkles className="w-8 h-8 text-airbnb" />
-              <h1 className="text-xl font-extrabold tracking-tight">OPS AIRBNB</h1>
+              <h1 className="text-xl font-extrabold tracking-tight">BIBIK AIRBNB</h1>
             </div>
             <button onClick={() => setSidebarOpen(false)} className="text-slate-400"><Plus className="rotate-45" size={24} /></button>
           </div>
@@ -2071,7 +2065,7 @@ const App = () => {
       <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-slate-200 p-6 flex-col">
         <div className="flex items-center gap-3 mb-10">
           <Sparkles className="w-8 h-8 text-airbnb" />
-          <h1 className="text-xl font-extrabold tracking-tight">OPS AIRBNB</h1>
+          <h1 className="text-xl font-extrabold tracking-tight">BIBIK AIRBNB</h1>
         </div>
         <nav className="space-y-1 flex-1">
           <div className="text-[10px] uppercase font-bold text-slate-400 mb-4 px-3 tracking-widest">Main Menu</div>
