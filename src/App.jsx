@@ -399,7 +399,12 @@ const App = () => {
       .eq('owner_id', userId)
       .order('category', { ascending: false });
 
-    if (error || !data || data.length === 0) {
+    if (error) {
+      console.error('Error fetching checklist items:', error);
+      return;
+    }
+
+    if (!data || data.length === 0) {
       console.warn('Seeding default checklist items...');
       const defaults = [
         { category: 'Ruang Tamu', item_text: 'Vakum/Mop lantai' },
@@ -410,7 +415,15 @@ const App = () => {
       await supabase.from('checklist_items').insert(defaults.map(d => ({ ...d, owner_id: userId })));
       fetchChecklistItems(userId);
     } else {
-      setChecklistItems(data);
+      // Deduplicate: keep first occurrence per (category + item_text)
+      const seen = new Set();
+      const unique = data.filter(item => {
+        const key = `${item.category}__${item.item_text}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setChecklistItems(unique);
     }
   };
 
