@@ -55,6 +55,8 @@ const App = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [paymentDetailCleaner, setPaymentDetailCleaner] = useState(null);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const [newUnit, setNewUnit] = useState({
     name: '',
@@ -512,6 +514,29 @@ const App = () => {
       alert('Error: ' + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAIVerify = async (task) => {
+    if (!task.proof_images || task.proof_images.length === 0) {
+      alert('Tiada gambar bukti untuk dianalisis.');
+      return;
+    }
+    setAiLoading(true);
+    setAiAnalysis(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-cleaning', {
+        body: { 
+          imageUrls: task.proof_images,
+          checklistItems: checklistItems.map(i => i.item_text)
+        }
+      });
+      if (error) throw error;
+      setAiAnalysis(data);
+    } catch (err) {
+      alert('AI Error: ' + err.message);
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -1546,6 +1571,70 @@ const App = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* AI Analysis Section */}
+              <div className="pt-6 border-t border-slate-100">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-xl bg-violet-50 text-violet-500">
+                      <Sparkles size={18} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900 leading-none">AI Cleaning Analysis</h4>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Powered by Gemini Vision</p>
+                    </div>
+                  </div>
+                  {!aiAnalysis && !aiLoading && (
+                    <button 
+                      onClick={() => handleAIVerify(reviewTask)}
+                      className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full bg-violet-500 text-white shadow-lg shadow-violet-500/20 hover:scale-105 active:scale-95 transition-all"
+                    >
+                      Analis Guna AI
+                    </button>
+                  )}
+                </div>
+
+                {aiLoading && (
+                  <div className="p-8 rounded-3xl bg-violet-50 border border-violet-100 flex flex-col items-center justify-center gap-4 animate-pulse">
+                    <div className="w-10 h-10 border-2 border-violet-200 border-t-violet-500 rounded-full animate-spin" />
+                    <p className="text-sm font-black text-violet-500">AI sedang meneliti gambar bukti...</p>
+                  </div>
+                )}
+
+                {aiAnalysis && (
+                  <div className={`p-6 rounded-3xl border-2 transition-all ${aiAnalysis.status === 'PASS' ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                         <div className={`p-2 rounded-xl ${aiAnalysis.status === 'PASS' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
+                           {aiAnalysis.status === 'PASS' ? <CheckCircle size={20} /> : <ShieldCheck size={20} />}
+                         </div>
+                         <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest opacity-50">AI Quality Score</p>
+                            <p className="text-2xl font-black">{aiAnalysis.score}/100</p>
+                         </div>
+                      </div>
+                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${aiAnalysis.status === 'PASS' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
+                        {aiAnalysis.status}
+                      </span>
+                    </div>
+                    
+                    <p className="text-sm font-bold text-slate-700 leading-relaxed mb-4">
+                      {aiAnalysis.feedback}
+                    </p>
+
+                    {aiAnalysis.observations && (
+                      <div className="space-y-2">
+                        {aiAnalysis.observations.map((obs, i) => (
+                          <div key={i} className="flex items-start gap-2 text-xs font-bold text-slate-500">
+                            <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-1.5" />
+                            {obs}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <footer className="p-8 bg-slate-50 flex gap-4">
