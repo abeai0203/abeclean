@@ -1332,7 +1332,7 @@ const App = () => {
         // Update existing task
         const { error: updateError } = await supabase
           .from('cleaning_tasks')
-          .update({ cleaner_id: cleanerId })
+          .update({ cleaner_id: cleanerId, notified: false })
           .eq('id', existingTask.id);
 
         if (updateError) throw updateError;
@@ -1343,6 +1343,7 @@ const App = () => {
           checkout_date: checkoutDate,
           cleaner_id: cleanerId,
           status: 'pending',
+          notified: false,
           owner_id: session?.user?.id,
           checklist: [
             { task: 'Change bedsheet & pillow covers', done: false },
