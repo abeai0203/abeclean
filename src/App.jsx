@@ -1683,13 +1683,16 @@ const App = () => {
             <button onClick={() => { setView('cleaners'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'cleaners' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
               <Users size={20} /> <span className="font-semibold text-sm">Cleaners</span>
             </button>
-            <div className="pt-6 text-[10px] uppercase font-bold text-slate-400 mb-2 px-3 tracking-widest">Areas</div>
-            {['all', 'Shah Alam', 'Puchong'].map(area => (
-              <button key={area} onClick={() => { setFilterArea(area); setView('dashboard'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${filterArea === area && view === 'dashboard' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
-                <MapPin size={20} /> <span className="font-semibold text-sm">{area === 'all' ? 'All Areas' : area}</span>
-              </button>
-            ))}
           </nav>
+
+          <div className="mt-auto pt-6 border-t border-slate-50">
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-3 py-4 rounded-2xl text-rose-500 hover:bg-rose-50 transition-all font-bold"
+            >
+              <LogOut size={20} /> <span className="text-sm">Log Out</span>
+            </button>
+          </div>
         </aside>
       </div>
 
@@ -1699,42 +1702,57 @@ const App = () => {
           <Sparkles className="w-8 h-8 text-airbnb" />
           <h1 className="text-xl font-extrabold tracking-tight">OPS AIRBNB</h1>
         </div>
-        <nav className="space-y-1">
-          <div className="text-[10px] uppercase font-bold text-slate-400 mb-2 px-3 tracking-widest">Main</div>
-          <button onClick={() => { setView('dashboard'); setFilterArea('all'); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'dashboard' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
-            <LayoutDashboard size={20} /> <span className="font-semibold text-sm">Dashboard</span>
+        <nav className="space-y-1 flex-1">
+          <div className="text-[10px] uppercase font-bold text-slate-400 mb-4 px-3 tracking-widest">Main Menu</div>
+          <button onClick={() => { setView('dashboard'); setFilterArea('all'); }} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group ${view === 'dashboard' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
+            <div className={`p-2 rounded-xl transition-all duration-300 ${view === 'dashboard' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-airbnb shadow-sm'}`}><LayoutDashboard size={18} /></div>
+            Dashboard
           </button>
-          <button onClick={() => { setView('calendar'); setFilterArea('all'); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'calendar' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
-            <Calendar size={20} /> <span className="font-semibold text-sm">Calendar</span>
+          <button onClick={() => { setView('calendar'); setFilterArea('all'); }} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group ${view === 'calendar' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
+            <div className={`p-2 rounded-xl transition-all duration-300 ${view === 'calendar' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-airbnb shadow-sm'}`}><Calendar size={18} /></div>
+            Calendar
           </button>
-          <button onClick={() => { setView('history'); setFilterArea('all'); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'history' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
-            <Clock size={20} /> <span className="font-semibold text-sm">History</span>
+          <button onClick={() => { setView('history'); setFilterArea('all'); }} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group ${view === 'history' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
+            <div className={`p-2 rounded-xl transition-all duration-300 ${view === 'history' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-airbnb shadow-sm'}`}><Clock size={18} /></div>
+            History
           </button>
-          <button onClick={() => { setView('payments'); setFilterArea('all'); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'payments' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
-            <Banknote size={20} /> <span className="font-semibold text-sm">Payments</span>
+          <button onClick={() => { setView('payments'); setFilterArea('all'); }} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group ${view === 'payments' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
+            <div className={`p-2 rounded-xl transition-all duration-300 ${view === 'payments' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-airbnb shadow-sm'}`}><Banknote size={18} /></div>
+            Payments
           </button>
-          <button onClick={() => setShowChecklistSettings(true)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 transition-all">
-            <CheckCircle size={20} /> <span className="font-semibold text-sm">Checklist</span>
+          <button onClick={() => setShowChecklistSettings(true)} className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group text-slate-500 hover:bg-slate-50">
+            <div className="p-2 rounded-xl bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-airbnb shadow-sm transition-all duration-300"><CheckCircle size={18} /></div>
+            Checklist
           </button>
-          <button onClick={() => { setView('cleaners'); setFilterArea('all'); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${view === 'cleaners' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
-            <Users size={20} /> <span className="font-semibold text-sm">Cleaners</span>
+          <button onClick={() => { setView('cleaners'); setFilterArea('all'); }} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group ${view === 'cleaners' ? 'bg-airbnb text-white shadow-lg shadow-airbnb/20' : 'text-slate-500 hover:bg-slate-50'}`}>
+            <div className={`p-2 rounded-xl transition-all duration-300 ${view === 'cleaners' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-airbnb shadow-sm'}`}><Users size={18} /></div>
+            Cleaners
           </button>
           
-          <div className="pt-10 mt-auto">
-            <button 
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-rose-500 hover:bg-rose-50 transition-all font-bold"
-            >
-              <LogOut size={20} /> <span className="text-sm">Log Out</span>
-            </button>
+          <div className="pt-8 mb-4">
+             <div className="text-[10px] uppercase font-bold text-slate-400 mb-4 px-3 tracking-widest">Areas</div>
+             <div className="space-y-1">
+                {['Shah Alam', 'Puchong'].map(area => (
+                  <button key={area} onClick={() => { setFilterArea(area); setView('dashboard'); }} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group ${filterArea === area && view === 'dashboard' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}>
+                    <div className={`p-2 rounded-xl transition-all duration-300 ${filterArea === area && view === 'dashboard' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-white group-hover:text-airbnb shadow-sm'}`}><MapPin size={18} /></div>
+                    {area}
+                  </button>
+                ))}
+             </div>
           </div>
-          <div className="pt-6 text-[10px] uppercase font-bold text-slate-400 mb-2 px-3 tracking-widest">Areas</div>
-          {['all', 'Shah Alam', 'Puchong'].map(area => (
-            <button key={area} onClick={() => { setFilterArea(area); setView('dashboard'); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${filterArea === area && view === 'dashboard' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
-              <MapPin size={20} /> <span className="font-semibold text-sm">{area === 'all' ? 'All Areas' : area}</span>
-            </button>
-          ))}
         </nav>
+
+        <div className="mt-auto pt-6">
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 font-bold group text-rose-500 hover:bg-rose-50"
+          >
+            <div className="p-2 rounded-xl bg-rose-50 text-rose-500 group-hover:bg-white shadow-sm transition-all duration-300">
+              <LogOut size={18} />
+            </div>
+            Log Out
+          </button>
+        </div>
       </aside>
 
       {/* Main Content */}
@@ -1743,9 +1761,22 @@ const App = () => {
           {view === 'dashboard' && (
             <>
               <header className="mb-12">
-                <div className="flex items-center gap-4 mb-10">
-                  <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-slate-600 hover:bg-white rounded-lg"><Menu size={24} /></button>
-                  <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">Dashboard</h2>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+                  <div className="flex items-center gap-4">
+                    <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-slate-600 hover:bg-white rounded-lg"><Menu size={24} /></button>
+                    <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">Dashboard</h2>
+                  </div>
+
+                  {/* Profile Section */}
+                  <div className="flex items-center gap-4 bg-white/50 backdrop-blur-md p-2 pr-6 rounded-full border border-white shadow-sm self-end md:self-auto">
+                    <div className="w-12 h-12 bg-gradient-to-br from-airbnb to-rose-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-airbnb/30">
+                      <User size={24} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Welcome,</p>
+                      <p className="text-sm font-black text-slate-900 leading-none">{session?.user?.email?.split('@')[0] || 'Boss'}</p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex flex-col lg:flex-row lg:items-center gap-6 w-full">
